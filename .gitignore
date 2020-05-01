@@ -131,3 +131,4 @@ data/flying_animals_data/
 save_checkpoint/
 script/
 tb.sh
+test/*.sh

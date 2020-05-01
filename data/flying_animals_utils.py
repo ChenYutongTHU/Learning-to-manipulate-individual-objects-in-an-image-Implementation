@@ -21,8 +21,8 @@ def check_occlusion(pos, pos_list):
 
 def generate_params(data, max_num, num):
     deter_params = []
-    bg_num = data['background'].shape[0]-1 #100
-    ani_num = data['foreground'].shape[0]-1 #240
+    bg_num = data['background'].shape[0]-1 
+    ani_num = data['foreground'].shape[0]-1 
     for i in range(num):  #size of the validation set
         param = dict()
         param['bg_index'], param['number'] = random.randint(1, bg_num), get_number(random.uniform(0,1))
@@ -61,8 +61,8 @@ def params_gen(data, max_num, deterministic_params=None):
     foregrounds = convert(data['foreground'])
     ani_masks = data['mask'].astype(np.float32)
 
-    bg_num = data['background'].shape[0]-1 #80 or 100
-    ani_num = data['foreground'].shape[0]-1 #240
+    bg_num = data['background'].shape[0]-1 
+    ani_num = data['foreground'].shape[0]-1 
 
     step = 0
     while True:
@@ -136,15 +136,19 @@ def generate_image(bg, texes, masks, params, max_num):
 def dataset(data_path, batch_size, max_num=5, phase='train'):
     """
     Args:
-    data_path: the path of npz
+    data_path: the path of npz   data/flying_animals_data/img_data.npz
     batch_size: batchsize
     max_num: max number of animals in an image
     phase: train: infinitely online generating image/ val: deterministic 200 / test: deterministic 2000
     """
     assert max_num==5,'please re-assign the distribution in get_number(), flying_animals_utils.py, if you need to reset max_num'
-    data = np.load(data_path) 
-    if phase in ['train', 'test']: 
+     
+    if phase in ['val', 'test']: 
         assert 200%batch_size==0
+        data_path = os.path.abspath(data_path)
+        data_path = data_path.split('.')[0]+'_test.npz' #data/flying_animals_data/img_data_test.npz
+
+    data = np.load(data_path)
     deterministic_params = generate_params(data, max_num=max_num, num=200 if phase=='val' else 2000) if not phase=='train' else None 
     partial_fn = functools.partial(params_gen, data=data, max_num=max_num, 
         deterministic_params=deterministic_params) 

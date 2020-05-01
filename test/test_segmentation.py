@@ -9,7 +9,7 @@ from model.nets import Generator_forward
 import imageio
 import numpy as np
 import time
-from data import multi_texture_utils
+from data import multi_texture_utils, flying_animals_utils
 from load_testdata import multi_texture_test, flying_animals_test, multi_dsprites_test
 import argparse
 
@@ -32,7 +32,7 @@ num_branch = args.num_branch
 
 if dataset_name == 'flying_animals':
     img_height, img_width = 192, 256
-    dataset = flying_animals_test.dataset(data_path=data_path,batch_size=batch_size)
+    dataset = flying_animals_utils.dataset(data_path=data_path,batch_size=batch_size, max_num=5, phase='test')
 elif dataset_name == 'multi_texture':
     img_height, img_width = 64, 64
     dataset = multi_texture_utils.dataset(data_path=data_path, batch_size=batch_size, max_num=4, phase='test')
