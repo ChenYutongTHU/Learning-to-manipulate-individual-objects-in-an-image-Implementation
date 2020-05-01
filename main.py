@@ -90,7 +90,7 @@ def main(argv):
             elif I in ['N','n']:
                 sys.exit(1)
             else:
-                os.system('rm -f '+FLAGS.checkpoint_dir+'/*')
+                os.system('rm -f -r '+FLAGS.checkpoint_dir+'/*')
                 save_log(FLAGS.sh_path, FLAGS.checkpoint_dir, print_flags_dict, sha)                
         else:
             os.makedirs(FLAGS.checkpoint_dir)

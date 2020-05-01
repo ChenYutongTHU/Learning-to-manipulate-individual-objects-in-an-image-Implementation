@@ -1,5 +1,5 @@
 tensorboard \
---logdir=/media/DATA2_6TB/yutong/learning2manip_inp/multi_texture/pretrain_inpainter  \
+--logdir=/media/DATA2_6TB/yutong/learning2manip_inp/flying_animals/CIS/repeat_useold_inp  \
 --port=6106
 #/media/DATA2_6TB/yutong/learning2manip_inp/multi_texture/CIS/repeat_useold_inp/
 #/media/DATA2_6TB/yutong/learning2manip_inp/multi_texture/CIS/bs16_lr1e-4

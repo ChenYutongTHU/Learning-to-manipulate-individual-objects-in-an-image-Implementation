@@ -29,7 +29,6 @@ def train(FLAGS):
         assert os.path.isfile(FLAGS.inpainter_ckpt+'.index')
         inpainter_saver = tf.train.Saver(tf.trainable_variables('Inpainter'))#only restore the trainable variables
 
-
     if FLAGS.resume_resnet:
         assert os.path.isfile(FLAGS.resnet_ckpt)
         resnet_reader=tf.compat.v1.train.NewCheckpointReader(FLAGS.resnet_ckpt)
@@ -65,6 +64,7 @@ def train(FLAGS):
                 assert os.path.isfile(FLAGS.inpainter_ckpt+'.index')  
                 inpainter_saver.restore(sess, FLAGS.inpainter_ckpt)
                 myprint ("Load pretrained inpainter {}".format(FLAGS.inpainter_ckpt))
+                
             if FLAGS.resume_resnet:
                 resnet_saver.restore(sess, FLAGS.resnet_ckpt)
                 myprint ("Load pretrained resnet {}".format(FLAGS.resnet_ckpt))

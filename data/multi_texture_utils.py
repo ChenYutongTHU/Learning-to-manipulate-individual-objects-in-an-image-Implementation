@@ -132,7 +132,7 @@ def dataset(data_path, batch_size, max_num=4, phase='train'):
 
     bg0 = imageio.imread(os.path.join(data_path,'bg.png'))
     bg0 = tf.convert_to_tensor(bg0/255, dtype=tf.float32)  #0~1
-    dataset = dataset.map(lambda n,m,t,h: combine(n,m,t,h, bg=bg0,max_num=max_num), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(lambda n,m,t,h: combine(n,m,t,h, bg=bg0,max_num=max_num), num_parallel_calls=tf.data.experimental.AUTOTUNE if phase=='train' else 1)
     dataset = dataset.batch(batch_size)
     # # print (dataset)
     dataset = dataset.prefetch(10)

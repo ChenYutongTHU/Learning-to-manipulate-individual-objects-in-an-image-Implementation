@@ -98,7 +98,7 @@ def params_gen(data, max_num, deterministic_params=None):
             yield bg, np.stack(texes, axis=0), np.stack(masks, axis=0), params
 
 
-def generate_image(bg, texes, masks, params, max_num, var_range):
+def generate_image(bg, texes, masks, params, max_num):
     #given the randomly selected foregrounds, backgrounds and their factors of variation, synthesize the final image.
 
     #zoom and shift transform
@@ -133,19 +133,19 @@ def generate_image(bg, texes, masks, params, max_num, var_range):
     return data
 
 
-def dataset(data_path, batch_size, max_num=5, val=False):
+def dataset(data_path, batch_size, max_num=5, phase='train'):
     """
     Args:
     data_path: the path of npz
     batch_size: batchsize
     max_num: max number of animals in an image
-    val: validation set   -> output 200 deterministic images 
+    phase: train: infinitely online generating image/ val: deterministic 200 / test: deterministic 2000
     """
     assert max_num==5,'please re-assign the distribution in get_number(), flying_animals_utils.py, if you need to reset max_num'
     data = np.load(data_path) 
-    if val: 
+    if phase in ['train', 'test']: 
         assert 200%batch_size==0
-    deterministic_params = generate_params(data, max_num=max_num, num=200) if val else None 
+    deterministic_params = generate_params(data, max_num=max_num, num=200 if phase=='val' else 2000) if not phase=='train' else None 
     partial_fn = functools.partial(params_gen, data=data, max_num=max_num, 
         deterministic_params=deterministic_params) 
     dataset = tf.data.Dataset.from_generator(

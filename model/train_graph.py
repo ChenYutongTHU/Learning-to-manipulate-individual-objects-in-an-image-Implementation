@@ -49,8 +49,10 @@ class Train_Graph(object):
         self.loss['Generator'], self.loss['Generator_branch'], self.loss['Generator_denominator'], self.loss['Generator_numerator'] = \
             Generator_Loss(self.generated_masks, self.pred_intensities, self.image_batch, 
                     self.unconditioned_mean, self.config.epsilon)  
-        
-
+            
+        if self.config.dataset == 'flying_animals':
+            #normalize self.image_batch
+            self.image_batch = tf_normalize_imgs(self.image_batch)
         #-----------VAE----------------
         if self.config.mode in ['train_VAE','train_end2end']:
             self.mask_capacity = tf.placeholder(shape=(), name='mask_capacity', dtype=tf.float32)
@@ -65,8 +67,6 @@ class Train_Graph(object):
                 self.generated_masks = tf.stack(reordered, axis=-1) #B H W 1 M
                 if self.config.dataset == 'flying_animals':
                     #resize image to (96, 128)
-                    #normalize self.image_batch
-                    self.image_batch = tf_normalize_imgs(self.image_batch)
                     self.image_batch = tf_resize_imgs(self.image_batch, size=[self.img_height//2,self.img_width//2])
                     self.generated_masks = tf_resize_imgs(self.generated_masks, size=[self.img_height//2, self.img_width//2])
 
