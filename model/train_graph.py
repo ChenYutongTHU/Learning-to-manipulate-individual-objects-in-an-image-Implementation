@@ -158,18 +158,18 @@ class Train_Graph(object):
 
     def load_training_data(self):
         if self.config.dataset == 'multi_texture':
-            return multi_texture_utils.dataset(self.config.root_dir, val=False,
+            return multi_texture_utils.dataset(self.config.root_dir, phase='train',
                 batch_size=self.batch_size, max_num=self.config.max_num)
         elif self.config.dataset == 'flying_animals':
-            return flying_animals_utils.dataset(self.config.root_dir, val=False,
+            return flying_animals_utils.dataset(self.config.root_dir, phase='train',
                 batch_size=self.batch_size, max_num=self.config.max_num)
 
         elif self.config.dataset == 'multi_dsprites':
-            return multi_dsprites_utils.dataset(self.config.root_dir,val=False,
+            return multi_dsprites_utils.dataset(self.config.root_dir, phase='train',
                 batch_size=self.batch_size, skipnum=self.config.skipnum, takenum=self.config.takenum,
                 shuffle=True, map_parallel_calls=tf.data.experimental.AUTOTUNE)
         elif self.config.dataset == 'objects_room':
-            return objects_room_utils.dataset(self.config.root_dir,val=False,
+            return objects_room_utils.dataset(self.config.root_dir, phase='train',
                 batch_size=self.batch_size, skipnum=self.config.skipnum, takenum=self.config.takenum,
                 shuffle=True, map_parallel_calls=tf.data.experimental.AUTOTUNE)
         else:
@@ -177,18 +177,18 @@ class Train_Graph(object):
                 # B H W 3
     def load_val_data(self):
         if self.config.dataset == 'multi_texture':
-            return multi_texture_utils.dataset(self.config.root_dir, val=True,
+            return multi_texture_utils.dataset(self.config.root_dir, phase='val',
                 batch_size=8, max_num=self.config.max_num)
         elif self.config.dataset == 'flying_animals':
-            return flying_animals_utils.dataset(self.config.root_dir,val=True,
+            return flying_animals_utils.dataset(self.config.root_dir, phase='val',
                 batch_size=8, max_num=self.config.max_num)
 
         elif self.config.dataset == 'multi_dsprites':
-            return multi_dsprites_utils.dataset(self.config.root_dir,val=True,
+            return multi_dsprites_utils.dataset(self.config.root_dir, phase='val',
                 batch_size=self.batch_size, skipnum=0, takenum=self.config.skipnum,
                 shuffle=False, map_parallel_calls=1)     
         elif self.config.dataset == 'objects_room':
-            return objects_room_utils.dataset(self.config.root_dir,val=True,
+            return objects_room_utils.dataset(self.config.root_dir, phase='val',
                 batch_size=self.batch_size, skipnum=0, takenum=self.config.skipnum,
                 shuffle=False, map_parallel_calls=1)       
         else:

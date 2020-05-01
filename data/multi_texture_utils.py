@@ -110,16 +110,17 @@ def combine(number, masks, texes, hue_value, bg,  max_num):
     data['masks'] = tf.transpose(all_masks, perm=[1,2,3,0])  #C H W 1 -> H W 1 C
     return data
 
-def dataset(data_path, batch_size, max_num=4, val=False):
+def dataset(data_path, batch_size, max_num=4, phase='train'):
     """
     Args:
     data_path: the path of combination elements  
     batch_size:
     max_num: max_num: max number of objects in an image
-    val: validation set   -> output 200 deterministic images 
+    phase: train: infinitely online generating image/ val: deterministic 200 / test: deterministic 2000
     """
     assert max_num==4,'please re-assign the distribution in get_number(), multi_texture_utils.py, if you need to reset max_num'
-    deterministic_params = generate_params(data_path, num=200, max_num=max_num) if val else None 
+    
+    deterministic_params = generate_params(data_path, num=200 if phase=='val' else 2000, max_num=max_num) if not phase=='train' else None 
 
     partial_fn = functools.partial(multi_texture_gen, 
       data_path=data_path, max_num=max_num, deterministic_params=deterministic_params)
