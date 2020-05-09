@@ -8,7 +8,7 @@ from common_flags import FLAGS
 import warnings
 from git import Repo
 from trainer import train_inpainter, train_CIS#, train_end2end ,train_VAE
-#from eval import eval_CIS, eval_VAE
+from eval import eval_VAE
 from model.utils.generic_utils import myprint, myinput
 import random
 import numpy as np
@@ -104,6 +104,8 @@ def main(argv):
             train_inpainter.train(FLAGS)
         elif FLAGS.mode == 'train_CIS':
             train_CIS.train(FLAGS)
+        elif FLAGS.mode == 'eval_VAE':
+             eval_VAE.eval(FLAGS)
         else:
             pass
         # elif FLAGS.mode == 'train_end2end':
@@ -113,8 +115,6 @@ def main(argv):
         #     pass
         # elif FLAGS.mode == 'eval_CIS':
         #     eval_CIS.eval(FLAGS)
-        # elif FLAGS.mode == 'eval_VAE':
-        #     eval_VAE.eval(FLAGS)
 
 if __name__ == '__main__':
     main(sys.argv)

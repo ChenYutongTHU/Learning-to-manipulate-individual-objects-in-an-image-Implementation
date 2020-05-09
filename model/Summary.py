@@ -103,9 +103,9 @@ def collect_end2end_summary(graph, FLAGS):
     tf.summary.scalar('IoU Validation',graph.loss['EvalIoU_var'], collections=['CIS_eval'])
 
     #-----histogram to show-----------
-    for grad, var in graph.train_vars_grads['VAE//separate/texVAE/']:
+    for grad, var in graph.train_vars_grads['VAE//separate/texVAE']:
         tf.summary.histogram(var.op.name+'/grad', grad, collections=['end2end_Sum'])
-    for grad, var in graph.train_vars_grads['VAE//separate/texVAE_BG/']:
+    for grad, var in graph.train_vars_grads['VAE//separate/bgVAE']:
         tf.summary.histogram(var.op.name+'/grad', grad, collections=['end2end_Sum'])
     for grad, var in graph.train_vars_grads['VAE//fusion']:
         tf.summary.histogram(var.op.name+'/grad', grad, collections=['end2end_Sum'])

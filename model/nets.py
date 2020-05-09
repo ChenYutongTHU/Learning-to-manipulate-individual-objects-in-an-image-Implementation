@@ -185,20 +185,16 @@ def _sample_z(z_mean, z_log_sigma_sq):
 
 def encoder(x, latent_dim, training=True):
     B, H, W, C = x.get_shape().as_list()
-    x = tf.pad(x, paddings=[[0,0],[1,2],[1,2],[0,0]], mode='REFLECT')
-    conv1 = conv2d(x, filter_shape=[4,4,C,32], stride=2, padding='VALID', name='conv1', biased=True, dilation=1)
+    conv1 = conv2d(x, filter_shape=[4,4,C,32], stride=2, padding='SAME', name='conv1', biased=True, dilation=1)
     conv1 = tf.nn.relu(conv1)
 
-    conv1 = tf.pad(conv1, paddings=[[0,0],[1,2],[1,2],[0,0]], mode='REFLECT')
-    conv2 = conv2d(conv1, filter_shape=[4,4,32,32], stride=2, padding='VALID', name='conv2', biased=True, dilation=1)
+    conv2 = conv2d(conv1, filter_shape=[4,4,32,32], stride=2, padding='SAME', name='conv2', biased=True, dilation=1)
     conv2 = tf.nn.relu(conv2)
 
-    conv2 = tf.pad(conv2, paddings=[[0,0],[1,2],[1,2],[0,0]], mode='REFLECT')
-    conv3 = conv2d(conv2, filter_shape=[4,4,32,32], stride=2, padding='VALID', name='conv3', biased=True, dilation=1)
+    conv3 = conv2d(conv2, filter_shape=[4,4,32,32], stride=2, padding='SAME', name='conv3', biased=True, dilation=1)
     conv3 = tf.nn.relu(conv3)
 
-    conv3 = tf.pad(conv3, paddings=[[0,0],[1,2],[1,2],[0,0]], mode='REFLECT')
-    conv4 = conv2d(conv3, filter_shape=[4,4,32,32], stride=2, padding='VALID', name='conv4', biased=True, dilation=1)
+    conv4 = conv2d(conv3, filter_shape=[4,4,32,32], stride=2, padding='SAME', name='conv4', biased=True, dilation=1)
     conv4 = tf.nn.relu(conv4)
     #B 4 4 32
 
@@ -222,13 +218,13 @@ def decoder(z, output_ch, latent_dim, x, training=True):
     up_fc1 = tf.reshape(up_fc1, [-1,H//16,W//16,32])
 
     deconv4 = deconv2d(up_fc1, filter_shape=[4,4,32,32], output_size=[H//8,W//8], name='deconv4', padding='SAME', biased=True)
-    deconv4 = tf.nn.relu(deconv4)
+    deconv4 = tf.nn.leaky_relu(deconv4)
 
     deconv3 = deconv2d(deconv4, filter_shape=[4,4,32,32], output_size=[H//4,W//4], name='deconv3', padding='SAME', biased=True)
-    deconv3 = tf.nn.relu(deconv3)
+    deconv3 = tf.nn.leaky_relu(deconv3)
 
     deconv2 = deconv2d(deconv3, filter_shape=[4,4,32,32], output_size=[H//2,W//2], name='deconv2', padding='SAME', biased=True)
-    deconv2 = tf.nn.relu(deconv2)    
+    deconv2 = tf.nn.leaky_relu(deconv2)    
 
     deconv1 = deconv2d(deconv2, filter_shape=[4,4,32,output_ch], output_size=[H,W], name='deconv1', padding='SAME', biased=True)
     
@@ -315,10 +311,10 @@ def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None
         out_fusion = tf.stack(out_fusion, axis=-1) #B H W 3 M
         fusion_error = tf.reduce_mean(tf.stack(fusion_error, axis=0))  #average on all branch 
 
-        # for background only learn the representation of its texture
+        # for background, we only learn the representation of its texture
         bg_mask = 1-tf.reduce_sum(masks, axis=-1)
         inputs = image*bg_mask #B H W 1
-        with tf.compat.v1.variable_scope('separate/texVAE_BG', reuse=tf.compat.v1.AUTO_REUSE):
+        with tf.compat.v1.variable_scope('separate/bgVAE', reuse=tf.compat.v1.AUTO_REUSE):
             z_mean, z_log_sigma_sq, out_logit = encoder_decoder(inputs, output_ch=3, latent_dim=bg_dim, training=training)
             out_bg = tf.nn.sigmoid(out_logit)
             bg_error = tf.reduce_mean(region_error(X=out_bg, Y=image, region=tf.expand_dims(bg_mask, axis=-1)))

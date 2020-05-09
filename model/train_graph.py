@@ -83,11 +83,11 @@ class Train_Graph(object):
                 VAE_loss['tex_error'], VAE_loss['mask_error'], VAE_loss['bg_error'], VAE_loss['fusion_error']
 
 
-            self.loss['VAE//separate/texVAE/'] = self.loss['tex_error']+self.config.tex_beta*self.loss['tex_kl_sum']
-            self.loss['VAE//separate/maskVAE/'] = self.loss['mask_error']+self.config.mask_gamma*self.loss['mask_kl_sum']
-            self.loss['VAE//separate/texVAE_BG/'] = self.loss['bg_error']+self.config.bg_beta*self.loss['bg_kl_sum']
+            self.loss['VAE//separate/texVAE'] = self.loss['tex_error']+self.config.tex_beta*self.loss['tex_kl_sum']
+            self.loss['VAE//separate/maskVAE'] = self.loss['mask_error']+self.config.mask_gamma*self.loss['mask_kl_sum']
+            self.loss['VAE//separate/bgVAE'] = self.loss['bg_error']+self.config.bg_beta*self.loss['bg_kl_sum']
             
-            self.loss['VAE//separate'] = self.loss['VAE//separate/texVAE/']+self.loss['VAE//separate/maskVAE/']+self.loss['VAE//separate/texVAE_BG/']
+            self.loss['VAE//separate'] = self.loss['VAE//separate/texVAE']+self.loss['VAE//separate/maskVAE']+self.loss['VAE//separate/bgVAE']
             self.loss['VAE//fusion'] = self.loss['VAE_fusion_error']
 
 

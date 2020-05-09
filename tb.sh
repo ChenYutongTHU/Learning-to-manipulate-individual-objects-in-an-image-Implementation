@@ -1,11 +1,14 @@
 tensorboard \
---logdir=/media/DATA2_6TB/yutong/learning2manip_inp/flying_animals/CIS/repeat_useold_inp  \
+--logdir=/media/DATA2_6TB/yutong/learning2manip/multi_dsprites/end2end/onlyVAE_caprep/comb/DBc99d7_other_dim5_beta6_bs8_lr1e-4  \
 --port=6106
+
+#multiVAE_checkpoint/repeat_nobg_usesegnet_debug
 #/media/DATA2_6TB/yutong/learning2manip_inp/multi_texture/CIS/repeat_useold_inp/
 #/media/DATA2_6TB/yutong/learning2manip_inp/multi_texture/CIS/bs16_lr1e-4
 #/media/DATA2_6TB/yutong/learning2manip/multi_texture/CPN_base/pretrain_inpainter/09e67_bs16_lr1e-4
 #/media/DATA2_6TB/yutong/learning2manip/multi_dsprites/end2end/onlyVAE_caprep/comb/e32e5_bs6_mask10_ave5k_2e-6_lr5e-4
 #../Object-Centric-Representation/multiVAE_checkpoint/repeat_nobg_useresnet_debug
+#../Object-Centric-Representation/multiVAE_checkpoint/repeat_nobg_usesegnet_debug
 
 #/media/DATA2_6TB/yutong/learning2manip/multi_dsprites/global/4068e_bs32_lr5e-4_dim30_beta4_CE/
 #/media/DATA2_6TB/yutong/learning2manip/multi_dsprites/global/4068e_bs32_lr5e-4_dim100_beta1_CE/
