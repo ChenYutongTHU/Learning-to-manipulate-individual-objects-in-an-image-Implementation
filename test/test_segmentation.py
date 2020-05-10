@@ -9,8 +9,7 @@ from model.nets import Generator_forward
 import imageio
 import numpy as np
 import time
-from data import multi_texture_utils, flying_animals_utils
-from load_testdata import multi_texture_test, flying_animals_test, multi_dsprites_test
+from data import multi_texture_utils, flying_animals_utils, objects_room_utils, multi_dsprites_utils
 import argparse
 
 parser = argparse.ArgumentParser(description='test the segmentation mean IoU')
@@ -36,12 +35,12 @@ if dataset_name == 'flying_animals':
 elif dataset_name == 'multi_texture':
     img_height, img_width = 64, 64
     dataset = multi_texture_utils.dataset(data_path=data_path, batch_size=batch_size, max_num=4, phase='test')
-# elif dataset_name == 'multi_dsprites':
-#     img_height, img_width = 64, 64
-#     dataset = multi_dsprites_test.dataset(tfrecords_path=data_path,batch_size=batch_size)   
-# elif dataset_name == 'objects_room':
-#     img_height, img_width = 64, 64
-#     dataset = objects_room_test.dataset(tfrecords_path=data_path,batch_size=batch_size)       
+elif dataset_name == 'multi_dsprites':
+    img_height, img_width = 64, 64
+    dataset = multi_dsprites_utils.dataset(tfrecords_path=data_path,batch_size=batch_size, phase='test')   
+elif dataset_name == 'objects_room':
+    img_height, img_width = 64, 64
+    dataset = objects_room_utils.dataset(tfrecords_path=data_path,batch_size=batch_size, phase='test')      
 
 ckpt_path = args.ckpt_path
 

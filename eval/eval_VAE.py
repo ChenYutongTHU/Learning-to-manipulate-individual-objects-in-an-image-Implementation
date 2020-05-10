@@ -33,10 +33,14 @@ def eval(FLAGS):
     restore_vars = tf.global_variables('VAE') + tf.global_variables('Generator') + tf.global_variables('Fusion')
     saver = tf.train.Saver(restore_vars)
 
+    #CIS_saver = tf.train.Saver(tf.global_variables('Generator'))
     with tf.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
         assert os.path.isfile(FLAGS.fullmodel_ckpt+'.index')
         saver.restore(sess, FLAGS.fullmodel_ckpt)
+        # CIS_saver.restore(sess, FLAGS.CIS_ckpt)
+
+        #saver.save(sess, '/home/yutong/Learning-to-manipulate-individual-objects-in-an-image-Implementation/save_checkpoint/md/model', global_step=0)
         myprint("resume model {}".format(FLAGS.fullmodel_ckpt))
         fetches = {
             'image_batch': graph.image_batch, 
@@ -48,7 +52,6 @@ def eval(FLAGS):
         assert FLAGS.batch_size==1
         input_img = convert2float(imageio.imread(FLAGS.input_img))
         input_img = np.expand_dims(input_img, axis=0)
-
         results = sess.run(fetches, feed_dict={graph.image_batch: input_img})
         img = convert2int(results['image_batch'][0])
 

@@ -128,7 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 data/flying_animals_data/
+data/*_data/
 save_checkpoint/
 script/
 tb.sh
 test/*.sh
+test/md_test_seg.sh
+test/or_test_seg.sh

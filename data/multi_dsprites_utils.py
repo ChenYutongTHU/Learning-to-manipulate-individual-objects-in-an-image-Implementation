@@ -77,31 +77,26 @@ def map(x):
     data['masks'] = mask
     return data
 
-def dataset(tfrecords_path, batch_size, dataset_variant='colored_on_colored', skipnum=0, takenum=2000,
-            map_parallel_calls=1):
-    """Read, decompress, and parse the TFRecords file.
-    Args:
-    tfrecords_path: str. Path to the dataset file.
-    dataset_variant: str. One of ['binarized', 'colored_on_grayscale',
-      'colored_on_colored']. This is used to identify the maximum number of
-      entities in each scene. If an incorrect identifier is passed in, the
-      TFRecords file will not be read correctly.
-    map_parallel_calls: int. Number of elements decoded asynchronously in
-      parallel. See documentation for `tf.data.Dataset.map`.
-    returns:
-    batched 'tf.data.TFRecordDataset'
-    """
-    if dataset_variant not in MAX_NUM_ENTITIES:
-        raise ValueError('Invalid `dataset_variant` provided. The supported values'
-                     ' are: {}'.format(list(MAX_NUM_ENTITIES.keys())))
-    max_num_entities = MAX_NUM_ENTITIES[dataset_variant] #colored on colored -> 5
-    is_grayscale = dataset_variant == 'binarized'
+def dataset(tfrecords_path, batch_size, phase='train'):
+    if phase=='test':
+        skipnum, takenum = 0,2000
+        shuffle = False
+    elif phase=='val':
+        skipnum, takenum = 2000,1000
+        shuffle = False 
+    else:
+        skipnum, takenum = 3000, -1
+        shuffle = True
+    max_num_entities = MAX_NUM_ENTITIES['colored_on_colored'] #colored on colored -> 5
     raw_dataset = tf.data.TFRecordDataset(
         tfrecords_path, compression_type=COMPRESSION_TYPE)
     raw_dataset = raw_dataset.skip(skipnum).take(takenum)
-    features = feature_descriptions(max_num_entities, is_grayscale)
+    features = feature_descriptions(max_num_entities, False)
     partial_decode_fn = functools.partial(_decode, features=features)
     
-    dataset = raw_dataset.map(partial_decode_fn,num_parallel_calls=map_parallel_calls)
-    dataset = dataset.batch(batch_size)
+    dataset = raw_dataset.map(partial_decode_fn,num_parallel_calls=1)
+    if shuffle:
+        dataset = dataset.shuffle(seed=479, buffer_size=50000, reshuffle_each_iteration=True)
+    dataset = dataset.repeat().batch(batch_size)
+    dataset = dataset.prefetch(10)
     return dataset

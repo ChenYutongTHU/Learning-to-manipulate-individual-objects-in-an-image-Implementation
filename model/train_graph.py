@@ -163,15 +163,10 @@ class Train_Graph(object):
         elif self.config.dataset == 'flying_animals':
             return flying_animals_utils.dataset(self.config.root_dir, phase='train',
                 batch_size=self.batch_size, max_num=self.config.max_num)
-
         elif self.config.dataset == 'multi_dsprites':
-            return multi_dsprites_utils.dataset(self.config.root_dir, phase='train',
-                batch_size=self.batch_size, skipnum=self.config.skipnum, takenum=self.config.takenum,
-                shuffle=True, map_parallel_calls=tf.data.experimental.AUTOTUNE)
+            return multi_dsprites_utils.dataset(self.config.root_dir, phase='train', batch_size=self.batch_size)
         elif self.config.dataset == 'objects_room':
-            return objects_room_utils.dataset(self.config.root_dir, phase='train',
-                batch_size=self.batch_size, skipnum=self.config.skipnum, takenum=self.config.takenum,
-                shuffle=True, map_parallel_calls=tf.data.experimental.AUTOTUNE)
+            return objects_room_utils.dataset(self.config.root_dir, phase='train', batch_size=self.batch_size)
         else:
             raise IOError("Unknown Dataset")
                 # B H W 3
@@ -182,15 +177,10 @@ class Train_Graph(object):
         elif self.config.dataset == 'flying_animals':
             return flying_animals_utils.dataset(self.config.root_dir, phase='val',
                 batch_size=8, max_num=self.config.max_num)
-
         elif self.config.dataset == 'multi_dsprites':
-            return multi_dsprites_utils.dataset(self.config.root_dir, phase='val',
-                batch_size=self.batch_size, skipnum=0, takenum=self.config.skipnum,
-                shuffle=False, map_parallel_calls=1)     
+            return multi_dsprites_utils.dataset(self.config.root_dir, phase='val', batch_size=8)
         elif self.config.dataset == 'objects_room':
-            return objects_room_utils.dataset(self.config.root_dir, phase='val',
-                batch_size=self.batch_size, skipnum=0, takenum=self.config.skipnum,
-                shuffle=False, map_parallel_calls=1)       
+            return objects_room_utils.dataset(self.config.root_dir, phase='val', batch_size=8)      
         else:
             raise IOError("Unknown Dataset")
 
