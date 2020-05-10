@@ -98,7 +98,7 @@ gflags.DEFINE_string('input_img','./?','input image path')
 gflags.DEFINE_string('traverse_type', 'tex', 'tex or branch')
 gflags.DEFINE_string('traverse_dim', 'all', 'all or #1,#2,#3')
 gflags.DEFINE_string('traverse_branch', 'all', 'all or #1,#2,#3')
-gflags.DEFINE_integer('traverse_range', '5', 'k z_mean +- k*sigma')
+gflags.DEFINE_float('traverse_range', '5', 'k z_mean +- k*sigma')
 
 
 gflags.DEFINE_string('VAE_loss','CE','CE or L1')

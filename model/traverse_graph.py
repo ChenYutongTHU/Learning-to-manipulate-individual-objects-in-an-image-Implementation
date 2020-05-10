@@ -23,7 +23,7 @@ class Traverse_Graph(object):
         self.ndim = ndim_dict[self.config.traverse_type]
         self.traverse_dim = [i for i in range(self.ndim) if self.config.traverse_dim=='all' or str(i) in self.config.traverse_dim.split(',')]
 
-        self.traverse_value = list(np.linspace(-1*self.config.traverse_range, self.config.traverse_range, 10))
+        self.traverse_value = list(np.linspace(-1*self.config.traverse_range, self.config.traverse_range, 60))
         self.VAE_outputs = []
         self.traverse_results =  []
 

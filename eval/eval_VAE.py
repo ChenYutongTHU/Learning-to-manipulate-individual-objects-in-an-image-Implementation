@@ -72,7 +72,7 @@ def eval(FLAGS):
 
         traverse_branch = [i for i in range(0,FLAGS.num_branch) if FLAGS.traverse_branch=='all' or str(i) in FLAGS.traverse_branch.split(',')]
         traverse_dim = [i for i in range(ndim) if FLAGS.traverse_dim=='all' or str(i) in FLAGS.traverse_dim.split(',')]
-        traverse_value = list(np.linspace(-1*FLAGS.traverse_range, FLAGS.traverse_range, 10))
+        traverse_value = list(np.linspace(-1*FLAGS.traverse_range, FLAGS.traverse_range, 60))
 
 
         outputs = np.reshape(outputs, [len(traverse_branch), len(traverse_dim), len(traverse_value),FLAGS.img_height,FLAGS.img_width,-1])
@@ -83,20 +83,13 @@ def eval(FLAGS):
             b = traverse_branch[i]
             out = outputs[i] #tdim * step* H * W * 3
 
-            gif_imgs = []
-            for j in range(len(traverse_value)):
-                value = traverse_value[j]
-
-                group = []
-                for d in range(len(traverse_dim)):
-                    dim = traverse_dim[d]
-                    group.append(pad_img(out[d,j,:,:,:])) #H W 3
-                group = np.concatenate(group, axis=1) #H k*W 3
-                group = convert2int(group)
-
-                gif_imgs.append(group)
-
-            imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, 'branch{}.gif'.format(b)), gif_imgs)
+            for d in range(len(traverse_dim)):
+                gif_imgs = []
+                for j in range(len(traverse_value)):
+                    img = (out[d,j,:,:,:]*255).astype(np.uint8)
+                    gif_imgs.append(img)
+                name = 'branch{}_dim{}.gif'.format(b, traverse_dim[d])
+                imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
 
 
 
