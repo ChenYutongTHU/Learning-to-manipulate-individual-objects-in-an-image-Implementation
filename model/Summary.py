@@ -62,6 +62,53 @@ def collect_CIS_summary(graph, FLAGS):
     tf.summary.merge(tf.compat.v1.get_collection("CIS_Sum_branch")), \
     tf.summary.merge(tf.compat.v1.get_collection("CIS_eval"))
 
+
+def collect_VAE_summary(graph, FLAGS):
+    ori = graph.image_batch[0] 
+    fusion = graph.fusion_outputs[0]
+    show_list = convert2uint8([ori, fusion])
+    tf.compat.v1.summary.image('image output', tf.stack(show_list, axis=0), max_outputs=len(show_list), collections=["VAE_Sum"])
+
+    seg_masks = tf.transpose(graph.generated_masks[0,:,:,:,:]*tf.expand_dims(ori, axis=-1),[3,0,1,2]) #N H W 3
+    tf.compat.v1.summary.image('segmentation', tf.cast(seg_masks*255,tf.uint8), max_outputs=FLAGS.num_branch, collections=["VAE_Sum"])
+
+    for i in range(FLAGS.num_branch-len(FLAGS.bg)):
+        seg = graph.generated_masks[0,:,:,:,i]*ori
+        out_mask = tf.tile(graph.VAE_outmasks[0,:,:,:,i],[1,1,3])
+        out_tex = graph.VAE_outtexes[0,:,:,:,i]
+        fusion = graph.VAE_fusion[0,:,:,:,i]
+        show_list = convert2uint8([seg, out_mask, out_tex, fusion])
+        tf.compat.v1.summary.image('branch{}'.format(i), tf.stack(show_list, axis=0), max_outputs=len(show_list), collections=["VAE_Sum"])  
+
+    #background
+    seg = tf.reduce_sum(graph.generated_masks[0,:,:,:,-1*len(FLAGS.bg):], axis=-1)*ori
+    out_bg_tex = graph.VAE_outtex_bg[0,:,:,:] #H W 3
+    show_list = convert2uint8([seg, out_bg_tex])
+    tf.compat.v1.summary.image('background', tf.stack(show_list, axis=0), max_outputs=len(show_list), collections=["VAE_Sum"]) 
+
+    tf.summary.scalar('Tex_error', graph.loss['tex_error'], collections=["VAE_Sum"])
+    tf.summary.scalar('Mask_error', graph.loss['mask_error'], collections=["VAE_Sum"])
+    tf.summary.scalar('BG_error', graph.loss['bg_error'], collections=["VAE_Sum"])
+
+    tf.summary.scalar('VAEFusion_error', graph.loss['VAE_fusion_error'], collections=["VAE_Sum"])
+    tf.summary.scalar('Fusion_Loss', graph.loss['Fusion'], collections=["VAE_Sum"])
+
+    tf.summary.scalar('Tex_latent_space', graph.loss['tex_kl_var'], collections=['VAE_Sum_tex'])
+    tf.summary.scalar('Mask_latent_space', graph.loss['mask_kl_var'], collections=['VAE_Sum_mask'])
+    tf.summary.scalar('BG_latent_space', graph.loss['bg_kl_var'], collections=['VAE_Sum_bg'])
+
+    for grad, var in graph.train_vars_grads['VAE//separate']:
+        tf.summary.histogram(var.op.name+'/grad', grad, collections=['VAE_Sum'])
+    for grad, var in graph.train_vars_grads['VAE//fusion']:
+        tf.summary.histogram(var.op.name+'/grad', grad, collections=['VAE_Sum'])
+    for grad, var in graph.train_vars_grads['Fusion']:
+        tf.summary.histogram(var.op.name+'/grad', grad, collections=['VAE_Sum'])
+
+    return tf.summary.merge(tf.compat.v1.get_collection("VAE_Sum")), \
+        tf.summary.merge(tf.compat.v1.get_collection("VAE_Sum_tex")), \
+        tf.summary.merge(tf.compat.v1.get_collection("VAE_Sum_mask")), \
+        tf.summary.merge(tf.compat.v1.get_collection("VAE_Sum_bg"))
+
 def collect_end2end_summary(graph, FLAGS):
     ori = graph.image_batch[0] 
     fusion = graph.fusion_outputs[0]
