@@ -62,7 +62,7 @@ class Traverse_Graph(object):
                     out_mask_logit = decoder(mask_z_mean, output_ch=1, latent_dim=self.config.mask_dim, x=self.generated_masks[:,:,:,:,i], training=False)
                     out_mask = tf.nn.sigmoid(out_mask_logit)
             if self.traverse_type=='bg':
-                assert min(self.config.traverse_branch)>=self.num_branch-len(self.config.bg)
+                assert min(self.traverse_branch)>=self.num_branch-len(self.config.bg)
                 output_ch = 3
                 scope = 'VAE//separate/bgVAE'
                 z_mean = bg_z_mean
@@ -88,7 +88,7 @@ class Traverse_Graph(object):
 
                     if self.traverse_type=='bg':
                         foregrounds = segmented_img[:,:,:,:,:-len(self.config.bg)] #B H W 3 C
-                        backgrounds = tf.expand_dims(bg_mask*self.image_batch, axis=-1) #B H W 3 1
+                        backgrounds = tf.expand_dims(bg_mask*out, axis=-1) #B H W 3 1
                     else:
                         if self.traverse_type=='tex':
                             tex,mask = out, self.generated_masks[:,:,:,:,i]
