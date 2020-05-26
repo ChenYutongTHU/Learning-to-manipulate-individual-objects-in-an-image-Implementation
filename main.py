@@ -6,7 +6,6 @@ import sys
 import pprint 
 from common_flags import FLAGS
 import warnings
-from git import Repo
 from trainer import train_inpainter, train_CIS, train_VAE
 from eval import eval_VAE
 from model.utils.generic_utils import myprint, myinput
