@@ -129,9 +129,8 @@ dmypy.json
 .pyre/
 data/flying_animals_data/*.npz
 data/flying_animals_data/data
-
-
-data/*_data/
+data/objects_room_data/*.tfrecords
+data/multi_dsprites_data/*.tfrecords
 save_checkpoint/
 script/
 tb.sh
