@@ -52,7 +52,8 @@ def eval(FLAGS):
         assert FLAGS.batch_size==1
         input_img = convert2float(imageio.imread(FLAGS.input_img))
         input_img = np.expand_dims(input_img, axis=0)
-        results = sess.run(fetches, feed_dict={graph.image_batch: input_img})
+
+        results = sess.run(fetches, feed_dict={graph.image_batch0: input_img})
         img = convert2int(results['image_batch'][0])
 
         imageio.imwrite(os.path.join(FLAGS.checkpoint_dir, 'img.png'), img)
@@ -78,21 +79,28 @@ def eval(FLAGS):
         traverse_value = list(np.linspace(-1*FLAGS.traverse_range, FLAGS.traverse_range, 60))
 
 
-        outputs = np.reshape(outputs, [len(traverse_branch), len(traverse_dim), len(traverse_value),FLAGS.img_height,FLAGS.img_width,-1])
+        if FLAGS.dataset == 'flying_animals':
+            outputs = np.reshape(outputs, [len(traverse_branch), len(traverse_dim), len(traverse_value),FLAGS.img_height//2,FLAGS.img_width//2,-1])
+        else:
+            outputs = np.reshape(outputs, [len(traverse_branch), len(traverse_dim), len(traverse_value),FLAGS.img_height,FLAGS.img_width,-1])
         #tbranch * tdim * step *  H * W * 3
 
-        #show gif
+
         for i in range(len(traverse_branch)):
             b = traverse_branch[i]
             out = outputs[i] #tdim * step* H * W * 3
 
             for d in range(len(traverse_dim)):
                 gif_imgs = []
+                outputdir = os.path.join(FLAGS.checkpoint_dir,'branch{}_dim{}'.format(i,d))
+                if not os.path.exists(outputdir):
+                    os.makedirs(outputdir)
                 for j in range(len(traverse_value)):
                     img = (out[d,j,:,:,:]*255).astype(np.uint8)
+                    imageio.imwrite(os.path.join(outputdir,'{}.png'.format(j)), img)
                     gif_imgs.append(img)
-                name = 'branch{}_dim{}.gif'.format(b, traverse_dim[d])
-                imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
+                # name = 'branch{}_dim{}.gif'.format(b, traverse_dim[d])
+                # imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
 
 
 

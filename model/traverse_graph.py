@@ -1,6 +1,6 @@
 import tensorflow as tf  
 import os
-from .utils.generic_utils import train_op,myprint, myinput
+from .utils.generic_utils import train_op,myprint, myinput, tf_resize_imgs
 from .nets import Generator_forward, encoder, decoder, tex_mask_fusion, Fusion_forward
 import numpy as np
 
@@ -28,17 +28,24 @@ class Traverse_Graph(object):
         self.traverse_results =  []
 
     def build(self):        
-        self.image_batch = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None,self.img_height,self.img_width,3])
+        self.image_batch0 = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None,self.img_height,self.img_width,3])
         with tf.name_scope("Generator") as scope:
-            self.generated_masks, null = Generator_forward(self.image_batch, self.config.dataset, 
+            self.generated_masks, null = Generator_forward(self.image_batch0, self.config.dataset, 
                     self.num_branch, model=self.config.model, training=False, reuse=None, scope=scope)
-
         reordered = [self.generated_masks[:,:,:,:,i] for i in range(self.num_branch) if not i in self.config.bg] + \
                     [self.generated_masks[:,:,:,:,i] for i in self.config.bg]
         reordered = tf.stack(reordered, axis=-1) #B H W 1 M
         self.generated_masks = reordered
 
+        if self.config.dataset == 'flying_animals':
+            #resize image to (96, 128)
+            self.image_batch = tf_resize_imgs(self.image_batch0, size=[self.img_height//2,self.img_width//2])
+            self.generated_masks = tf_resize_imgs(self.generated_masks, size=[self.img_height//2, self.img_width//2])
+        else:
+            self.image_batch = tf.identity(self.image_batch0)
+            
         segmented_img = self.generated_masks*tf.expand_dims(self.image_batch, axis=-1)#B H W 3 M
+
 
 
         #Fusion
