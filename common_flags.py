@@ -36,7 +36,7 @@ gflags.DEFINE_string('mask_ckpt', '?', '')
 gflags.DEFINE_string('tex_ckpt', '?', '')
 gflags.DEFINE_string('generator_ckpt', '?', 'checkpoint of mask generator')
 gflags.DEFINE_string('inpainter_ckpt', '?', 'checkpoint of pretrained inpainter')
-gflags.DEFINE_string('resnet_ckpt', '/home/yutong/Object-Centric-Representation/resnet/resnet_v2_50/resnet_v2_50.ckpt', 'checkpoint of pretrained resnet')
+gflags.DEFINE_string('resnet_ckpt', 'resnet/resnet_v2_50.ckpt', 'checkpoint of pretrained resnet')
 #to - do  VAE (TEXTURE AND SHAPE)
 
 

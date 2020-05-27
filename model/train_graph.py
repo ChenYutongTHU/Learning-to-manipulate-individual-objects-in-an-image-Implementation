@@ -1,6 +1,6 @@
 import tensorflow as tf  
 import os
-from data import multi_texture_utils, flying_animals_utils#, multi_dsprites_utils, objects_room_utils
+from data import multi_texture_utils, flying_animals_utils, multi_dsprites_utils, objects_room_utils
 from .utils.generic_utils import bin_edge_map, train_op,myprint, myinput, erode_dilate, tf_resize_imgs, tf_normalize_imgs, reorder_mask
 from .utils.loss_utils import Generator_Loss, Inpainter_Loss, Supervised_Generator_Loss
 from .nets import Generator_forward, Inpainter_forward, VAE_forward, Fusion_forward
