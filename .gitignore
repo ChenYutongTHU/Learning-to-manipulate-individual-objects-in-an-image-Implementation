@@ -131,7 +131,9 @@ data/flying_animals_data/*.npz
 data/flying_animals_data/data
 data/objects_room_data/*.tfrecords
 data/multi_dsprites_data/*.tfrecords
+
 save_checkpoint/
+checkpoint/
 script/
 tb.sh
 test/*.sh
