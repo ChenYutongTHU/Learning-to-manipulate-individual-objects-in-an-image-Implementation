@@ -31,6 +31,13 @@ def tf_resize_imgs(imgs, size):
         resize_imgs = tf.stack(resize_imgs, axis=-1)
         return resize_imgs
 
+def reorder_mask(masks):
+    #put background segmentation in the last num of channels
+    pixel_sum = tf.reduce_sum(masks, axis=[0,1,2,3]) #C,
+    indices = tf.argsort(values=pixel_sum, direction='ASCENDING') #[1]
+    reordered = tf.gather(masks, indices, axis=-1)
+    return  reordered
+
 def myprint(string):
     print ("\033[0;30;42m"+string+"\033[0m")
 

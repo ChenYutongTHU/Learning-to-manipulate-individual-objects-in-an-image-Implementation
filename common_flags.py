@@ -34,7 +34,6 @@ gflags.DEFINE_string('fullmodel_ckpt', '?', 'checkpoint of full model  inpainter
 gflags.DEFINE_string('CIS_ckpt', '?', 'checkpoint of inpainter + generator')
 gflags.DEFINE_string('mask_ckpt', '?', '')
 gflags.DEFINE_string('tex_ckpt', '?', '')
-gflags.DEFINE_string('bg','0','branch background is assigned to ')
 gflags.DEFINE_string('generator_ckpt', '?', 'checkpoint of mask generator')
 gflags.DEFINE_string('inpainter_ckpt', '?', 'checkpoint of pretrained inpainter')
 gflags.DEFINE_string('resnet_ckpt', '/home/yutong/Object-Centric-Representation/resnet/resnet_v2_50/resnet_v2_50.ckpt', 'checkpoint of pretrained resnet')
@@ -91,6 +90,7 @@ gflags.DEFINE_integer('ani_num',240,'')
 #automatically set flags
 gflags.DEFINE_integer('img_height',64,'')
 gflags.DEFINE_integer('img_width',64,'')
+gflags.DEFINE_integer('n_bg',1,'')
 
 
 #traverse

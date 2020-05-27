@@ -1,6 +1,6 @@
 import tensorflow as tf  
 import os
-from .utils.generic_utils import train_op,myprint, myinput, tf_resize_imgs
+from .utils.generic_utils import train_op,myprint, myinput, tf_resize_imgs, reorder_mask
 from .nets import Generator_forward, encoder, decoder, tex_mask_fusion, Fusion_forward
 import numpy as np
 
@@ -32,10 +32,7 @@ class Traverse_Graph(object):
         with tf.name_scope("Generator") as scope:
             self.generated_masks, null = Generator_forward(self.image_batch0, self.config.dataset, 
                     self.num_branch, model=self.config.model, training=False, reuse=None, scope=scope)
-        reordered = [self.generated_masks[:,:,:,:,i] for i in range(self.num_branch) if not i in self.config.bg] + \
-                    [self.generated_masks[:,:,:,:,i] for i in self.config.bg]
-        reordered = tf.stack(reordered, axis=-1) #B H W 1 M
-        self.generated_masks = reordered
+        self.generated_masks = reorder_mask(self.generated_masks)
 
         if self.config.dataset == 'flying_animals':
             #resize image to (96, 128)
@@ -49,7 +46,7 @@ class Traverse_Graph(object):
 
 
         #Fusion
-        bg_mask = 1-tf.reduce_sum(self.generated_masks[:,:,:,:,:-1*len(self.config.bg)], axis=-1)
+        bg_mask = 1-tf.reduce_sum(self.generated_masks[:,:,:,:,:-1*self.config.n_bg], axis=-1)
         with tf.compat.v1.variable_scope('VAE//separate/bgVAE', reuse=tf.compat.v1.AUTO_REUSE):
             bg_z_mean, null = encoder(x=bg_mask*self.image_batch, latent_dim=self.config.bg_dim, training=False)
             out_bg_logit = decoder(bg_z_mean, output_ch=3, latent_dim=self.config.bg_dim, x=bg_mask*self.image_batch, training=False)
@@ -69,7 +66,7 @@ class Traverse_Graph(object):
                     out_mask_logit = decoder(mask_z_mean, output_ch=1, latent_dim=self.config.mask_dim, x=self.generated_masks[:,:,:,:,i], training=False)
                     out_mask = tf.nn.sigmoid(out_mask_logit)
             if self.traverse_type=='bg':
-                assert min(self.traverse_branch)>=self.num_branch-len(self.config.bg)
+                assert min(self.traverse_branch)>=self.num_branch-self.config.n_bg
                 output_ch = 3
                 scope = 'VAE//separate/bgVAE'
                 z_mean = bg_z_mean
@@ -94,7 +91,7 @@ class Traverse_Graph(object):
                         out = tf.nn.sigmoid(out_logit)
 
                     if self.traverse_type=='bg':
-                        foregrounds = segmented_img[:,:,:,:,:-len(self.config.bg)] #B H W 3 C
+                        foregrounds = segmented_img[:,:,:,:,:-self.config.n_bg] #B H W 3 C
                         backgrounds = tf.expand_dims(bg_mask*out, axis=-1) #B H W 3 1
                     else:
                         if self.traverse_type=='tex':
@@ -105,8 +102,8 @@ class Traverse_Graph(object):
                             VAE_fusion_out, null = tex_mask_fusion(tex=tex, mask=mask) 
                         foregrounds = tf.concat([segmented_img[:,:,:,:,0:i],
                             tf.expand_dims(VAE_fusion_out, axis=-1),
-                            segmented_img[:,:,:,:,i+1:-len(self.config.bg)]], axis=-1)
-                        background_mask = 1-tf.reduce_sum(self.generated_masks[:,:,:,:,0:i],axis=-1)-mask-tf.reduce_sum(self.generated_masks[:,:,:,:,i+1:-len(self.config.bg)],axis=-1)
+                            segmented_img[:,:,:,:,i+1:-self.config.n_bg]], axis=-1)
+                        background_mask = 1-tf.reduce_sum(self.generated_masks[:,:,:,:,0:i],axis=-1)-mask-tf.reduce_sum(self.generated_masks[:,:,:,:,i+1:-self.config.n_bg],axis=-1)
                         backgrounds = tf.expand_dims(background_mask*out_bg, axis=-1)
 
                     fusion_inputs = tf.concat([foregrounds, backgrounds], axis=-1)

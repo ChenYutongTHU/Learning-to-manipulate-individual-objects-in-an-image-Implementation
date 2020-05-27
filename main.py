@@ -2,6 +2,7 @@ import tensorflow as tf
 from itertools import count
 import os
 import gflags  
+from git import Repo
 import sys
 import pprint 
 from common_flags import FLAGS
@@ -51,8 +52,7 @@ def complete_FLAGS(FLAGS):
     else:
         assert FLAGS.num_branch >= FLAGS.max_num+1
 
-    FLAGS.bg = [int(i) for i in FLAGS.bg.split(',') if int(i) <FLAGS.num_branch]   #the channel backgrounds are assigned to
-    # used in trainVAE & train-end2end  
+    FLAGS.n_bg = 3 if FLAGS.dataset=='objects_room' else 1
     return 
 
 def main(argv):

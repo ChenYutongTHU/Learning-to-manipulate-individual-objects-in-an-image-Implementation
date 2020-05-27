@@ -1,7 +1,7 @@
 import tensorflow as tf  
 import os
 from data import multi_texture_utils, flying_animals_utils#, multi_dsprites_utils, objects_room_utils
-from .utils.generic_utils import bin_edge_map, train_op,myprint, myinput, erode_dilate, tf_resize_imgs, tf_normalize_imgs
+from .utils.generic_utils import bin_edge_map, train_op,myprint, myinput, erode_dilate, tf_resize_imgs, tf_normalize_imgs, reorder_mask
 from .utils.loss_utils import Generator_Loss, Inpainter_Loss, Supervised_Generator_Loss
 from .nets import Generator_forward, Inpainter_forward, VAE_forward, Fusion_forward
 
@@ -62,15 +62,13 @@ class Train_Graph(object):
                 for i in range(self.config.num_branch):
                     filter_masks.append(erode_dilate(self.generated_masks[:,:,:,:,i]))
                 self.generated_masks = tf.stack(filter_masks, axis=-1)#B H W 1 num_branch
-                reordered = [self.generated_masks[:,:,:,:,i] for i in range(self.num_branch) if not i in self.config.bg] + \
-                            [self.generated_masks[:,:,:,:,i] for i in self.config.bg]
-                self.generated_masks = tf.stack(reordered, axis=-1) #B H W 1 M
+                self.generated_masks = reorder_mask(self.generated_masks)
                 if self.config.dataset == 'flying_animals':
                     #resize image to (96, 128)
                     self.image_batch = tf_resize_imgs(self.image_batch, size=[self.img_height//2,self.img_width//2])
                     self.generated_masks = tf_resize_imgs(self.generated_masks, size=[self.img_height//2, self.img_width//2])
 
-                VAE_loss, VAE_outputs = VAE_forward(image=self.image_batch, masks=self.generated_masks[:,:,:,:,:-1*len(self.config.bg)],  
+                VAE_loss, VAE_outputs = VAE_forward(image=self.image_batch, masks=self.generated_masks[:,:,:,:,:-1*self.config.n_bg],  
                     bg_dim=self.config.bg_dim, tex_dim=self.config.tex_dim, mask_dim=self.config.mask_dim, 
                     scope=scope, reuse=None, training=self.is_training)
 
