@@ -137,7 +137,4 @@ checkpoint/
 script/
 tb.sh
 resnet/
-test/*.sh
-test/md_test_seg.sh
-test/or_test_seg.sh
 *_select/
