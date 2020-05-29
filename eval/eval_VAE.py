@@ -57,8 +57,6 @@ def eval(FLAGS):
         img = convert2int(results['image_batch'][0])
 
         imageio.imwrite(os.path.join(FLAGS.checkpoint_dir, 'img.png'), img)
-        imageio.imwrite(os.path.join(FLAGS.checkpoint_dir, 'outbg.png'), convert2int(results['out_bg'][0]))
-        imageio.imwrite(os.path.join(FLAGS.checkpoint_dir, 'inbg.png'), convert2int(results['in_bg'][0]))
         for i in range(FLAGS.num_branch):
             imageio.imwrite(os.path.join(FLAGS.checkpoint_dir, 'segment_{}.png'.format(i)), convert2int(results['generated_masks'][0,:,:,:,i]*results['image_batch'][0]))
 
@@ -74,15 +72,17 @@ def eval(FLAGS):
             nch = 1
             ndim = FLAGS.mask_dim            
 
-        traverse_branch = [i for i in range(0,FLAGS.num_branch) if FLAGS.traverse_branch=='all' or str(i) in FLAGS.traverse_branch.split(',')]
-        traverse_dim = [i for i in range(ndim) if FLAGS.traverse_dim=='all' or str(i) in FLAGS.traverse_dim.split(',')]
+        if FLAGS.traverse_type=='bg':
+            traverse_branch = [FLAGS.num_branch-1]
+        else:
+            traverse_branch = [i for i in range(0,FLAGS.num_branch) if FLAGS.traverse_branch=='all' or str(i) in FLAGS.traverse_branch.split(',')]
         traverse_value = list(np.linspace(-1*FLAGS.traverse_range, FLAGS.traverse_range, 60))
 
 
         if FLAGS.dataset == 'flying_animals':
-            outputs = np.reshape(outputs, [len(traverse_branch), len(traverse_dim), len(traverse_value),FLAGS.img_height//2,FLAGS.img_width//2,-1])
+            outputs = np.reshape(outputs, [len(traverse_branch), FLAGS.top_kdim, len(traverse_value),FLAGS.img_height//2,FLAGS.img_width//2,-1])
         else:
-            outputs = np.reshape(outputs, [len(traverse_branch), len(traverse_dim), len(traverse_value),FLAGS.img_height,FLAGS.img_width,-1])
+            outputs = np.reshape(outputs, [len(traverse_branch), FLAGS.top_kdim, len(traverse_value),FLAGS.img_height,FLAGS.img_width,-1])
         #tbranch * tdim * step *  H * W * 3
 
 
@@ -90,17 +90,13 @@ def eval(FLAGS):
             b = traverse_branch[i]
             out = outputs[i] #tdim * step* H * W * 3
 
-            for d in range(len(traverse_dim)):
+            for d in range(FLAGS.top_kdim):
                 gif_imgs = []
-                outputdir = os.path.join(FLAGS.checkpoint_dir,'branch{}_dim{}'.format(i,d))
-                if not os.path.exists(outputdir):
-                    os.makedirs(outputdir)
                 for j in range(len(traverse_value)):
                     img = (out[d,j,:,:,:]*255).astype(np.uint8)
-                    imageio.imwrite(os.path.join(outputdir,'{}.png'.format(j)), img)
                     gif_imgs.append(img)
-                # name = 'branch{}_dim{}.gif'.format(b, traverse_dim[d])
-                # imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
+                name = 'branch{}_var{}.gif'.format(b, d)
+                imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
 
 
 

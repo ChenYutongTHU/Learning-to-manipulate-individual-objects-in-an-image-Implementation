@@ -138,3 +138,5 @@ script/
 tb.sh
 resnet/
 *_select/
+outputs/
+sample_imgs/

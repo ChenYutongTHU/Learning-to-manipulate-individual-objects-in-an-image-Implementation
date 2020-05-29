@@ -14,8 +14,8 @@ gflags.DEFINE_bool('shuffle',False,'')
 
 
 #dir
-gflags.DEFINE_string('checkpoint_dir', "", "Experiment folder. It will contain"
-                     "the saved checkpoints, tensorboard logs or evaluation results.")
+gflags.DEFINE_string('checkpoint_dir', "checkpoint", "Experiment folder. It will contain"
+                     "the saved checkpoints and tensorboard logs or disentanglement results")
 #gflags.DEFINE_string('output_dir',"./outputs/0","Containing outputs result when doing evaluation")
 gflags.DEFINE_integer('summaries_secs', 40, 'number of seconds between computation of summaries, used in train_inpainter')
 gflags.DEFINE_integer('summaries_steps', 100, 'number of step between computation of summaries, used in train_CIS')
@@ -96,7 +96,7 @@ gflags.DEFINE_integer('n_bg',1,'')
 #traverse
 gflags.DEFINE_string('input_img','./?','input image path')
 gflags.DEFINE_string('traverse_type', 'tex', 'tex or branch')
-gflags.DEFINE_string('traverse_dim', 'all', 'all or #1,#2,#3')
+gflags.DEFINE_integer('top_kdim', 5, 'k dimensions with largest KL divergence to traverse')
 gflags.DEFINE_string('traverse_branch', 'all', 'all or #1,#2,#3')
 gflags.DEFINE_float('traverse_range', '5', 'k z_mean +- k*sigma')
 

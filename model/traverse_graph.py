@@ -1,7 +1,7 @@
 import tensorflow as tf  
 import os
-from .utils.generic_utils import train_op,myprint, myinput, tf_resize_imgs, reorder_mask
-from .nets import Generator_forward, encoder, decoder, tex_mask_fusion, Fusion_forward
+from .utils.generic_utils import train_op,myprint, myinput, tf_resize_imgs, reorder_mask, erode_dilate
+from .nets import Generator_forward, encoder, decoder, tex_mask_fusion, Fusion_forward, gaussian_kl
 import numpy as np
 
 class Traverse_Graph(object):
@@ -13,15 +13,15 @@ class Traverse_Graph(object):
         self.num_branch = FLAGS.num_branch
         self.img_height, self.img_width = FLAGS.img_height, FLAGS.img_width
 
-        self.traverse_branch = [i for i in range(0,self.num_branch) if self.config.traverse_branch=='all' or str(i) in self.config.traverse_branch.split(',')]
-
         assert self.config.traverse_type in ['tex', 'mask', 'bg']
-
         self.traverse_type = self.config.traverse_type
+        if self.traverse_type == 'bg':
+            self.traverse_branch = [self.num_branch-1]
+        else:
+            self.traverse_branch = [i for i in range(0,self.num_branch) if self.config.traverse_branch=='all' or str(i) in self.config.traverse_branch.split(',')]
 
         ndim_dict = {'tex':self.config.tex_dim, 'mask':self.config.mask_dim, 'bg':self.config.bg_dim}
         self.ndim = ndim_dict[self.config.traverse_type]
-        self.traverse_dim = [i for i in range(self.ndim) if self.config.traverse_dim=='all' or str(i) in self.config.traverse_dim.split(',')]
 
         self.traverse_value = list(np.linspace(-1*self.config.traverse_range, self.config.traverse_range, 60))
         self.VAE_outputs = []
@@ -32,6 +32,11 @@ class Traverse_Graph(object):
         with tf.name_scope("Generator") as scope:
             self.generated_masks, null = Generator_forward(self.image_batch0, self.config.dataset, 
                     self.num_branch, model=self.config.model, training=False, reuse=None, scope=scope)
+
+        filter_masks = []
+        for i in range(self.config.num_branch):
+            filter_masks.append(erode_dilate(self.generated_masks[:,:,:,:,i]))
+        self.generated_masks = tf.stack(filter_masks, axis=-1)#B H W 1 num_branch
         self.generated_masks = reorder_mask(self.generated_masks)
 
         if self.config.dataset == 'flying_animals':
@@ -48,7 +53,7 @@ class Traverse_Graph(object):
         #Fusion
         bg_mask = 1-tf.reduce_sum(self.generated_masks[:,:,:,:,:-1*self.config.n_bg], axis=-1)
         with tf.compat.v1.variable_scope('VAE//separate/bgVAE', reuse=tf.compat.v1.AUTO_REUSE):
-            bg_z_mean, null = encoder(x=bg_mask*self.image_batch, latent_dim=self.config.bg_dim, training=False)
+            bg_z_mean, bg_z_log_sigma_sq = encoder(x=bg_mask*self.image_batch, latent_dim=self.config.bg_dim, training=False)
             out_bg_logit = decoder(bg_z_mean, output_ch=3, latent_dim=self.config.bg_dim, x=bg_mask*self.image_batch, training=False)
             out_bg = tf.nn.sigmoid(out_bg_logit)
 
@@ -66,23 +71,25 @@ class Traverse_Graph(object):
                     out_mask_logit = decoder(mask_z_mean, output_ch=1, latent_dim=self.config.mask_dim, x=self.generated_masks[:,:,:,:,i], training=False)
                     out_mask = tf.nn.sigmoid(out_mask_logit)
             if self.traverse_type=='bg':
-                assert min(self.traverse_branch)>=self.num_branch-self.config.n_bg
                 output_ch = 3
                 scope = 'VAE//separate/bgVAE'
-                z_mean = bg_z_mean
+                z_mean, z_log_sigma_sq = bg_z_mean, bg_z_log_sigma_sq
             elif self.traverse_type=='tex':
                 output_ch = 3
                 scope = 'VAE//separate/texVAE'
-                z_mean = tex_z_mean
+                z_mean, z_log_sigma_sq = tex_z_mean, tex_z_log_sigma_sq
             else:
                 output_ch = 1
                 scope = 'VAE//separate/maskVAE'
-                z_mean = mask_z_mean
+                z_mean, z_log_sigma_sq = mask_z_mean, mask_z_log_sigma_sq
 
-            for d in self.traverse_dim:
-                delta_unit = np.zeros([self.batch_size, self.ndim])
-                delta_unit[:,d] = 1
-                delta_unit = tf.constant(delta_unit, dtype=tf.float32) #B,dim
+            KLs = gaussian_kl(z_mean, z_log_sigma_sq)[0] #B,zdim -> zdim,
+            self.traverse_dim = tf.math.top_k(KLs, k=self.config.top_kdim, sorted=True).indices
+
+            for d_count in range(self.config.top_kdim):
+                d = self.traverse_dim[d_count]
+                delta_unit = tf.one_hot(indices=[d], depth=self.ndim)
+                delta_unit = tf.tile(delta_unit, [self.batch_size,1]) #B,dim
 
                 for k in self.traverse_value: 
                     shifted_z = z_mean + delta_unit*k #B,dim
