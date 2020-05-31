@@ -99,6 +99,7 @@ gflags.DEFINE_string('traverse_type', 'tex', 'tex or branch')
 gflags.DEFINE_integer('top_kdim', 5, 'k dimensions with largest KL divergence to traverse')
 gflags.DEFINE_string('traverse_branch', 'all', 'all or #1,#2,#3')
 gflags.DEFINE_float('traverse_range', '5', 'k z_mean +- k*sigma')
-
+gflags.DEFINE_float('traverse_start', '-1', 'k z_mean +- k*sigma')
+gflags.DEFINE_float('traverse_end', '1', 'k z_mean +- k*sigma')
 
 gflags.DEFINE_string('VAE_loss','CE','CE or L1')

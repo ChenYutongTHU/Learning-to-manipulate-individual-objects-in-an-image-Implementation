@@ -22,7 +22,7 @@ def convert2int(img):
 
 def pad_img(img):
     H,W,C = img.shape
-    pad_img = np.ones([H+4, W+4,C])
+    pad_img = (np.ones([H+4, W+4,C])*255).astype(np.uint8)
     pad_img[2:2+H,2:2+W,:] = img  #H W 3
     return pad_img
 
@@ -76,7 +76,7 @@ def eval(FLAGS):
             traverse_branch = [FLAGS.num_branch-1]
         else:
             traverse_branch = [i for i in range(0,FLAGS.num_branch) if FLAGS.traverse_branch=='all' or str(i) in FLAGS.traverse_branch.split(',')]
-        traverse_value = list(np.linspace(-1*FLAGS.traverse_range, FLAGS.traverse_range, 60))
+        traverse_value = list(np.linspace(FLAGS.traverse_start, FLAGS.traverse_end, 60))
 
 
         if FLAGS.dataset == 'flying_animals':
@@ -86,20 +86,28 @@ def eval(FLAGS):
         #tbranch * tdim * step *  H * W * 3
 
 
+        branches = []
         for i in range(len(traverse_branch)):
+            values = [[None for jj in range(FLAGS.top_kdim) ] for ii in range(len(traverse_value))]
             b = traverse_branch[i]
             out = outputs[i] #tdim * step* H * W * 3
-
             for d in range(FLAGS.top_kdim):
                 gif_imgs = []
                 for j in range(len(traverse_value)):
                     img = (out[d,j,:,:,:]*255).astype(np.uint8)
                     gif_imgs.append(img)
+                    values[j][d] = pad_img(img)
                 name = 'branch{}_var{}.gif'.format(b, d)
-                imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
+                #imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
+
+            #values  len(traverse_value) * kdim (img)
+            value_slices = [np.concatenate(values[j], axis=1) for j in range(len(traverse_value))]  #group different dimensions along the axis x
+            #len(traverse_value)*(H*W*3)
+            branches.append(value_slices)  
+        merge_slices = [np.concatenate([branches[i][j] for i in range(len(traverse_branch))], axis=0) for j in range(len(traverse_value))]  
 
 
-
+        imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, 'output.gif'), merge_slices, duration=1/30)
 
 
         

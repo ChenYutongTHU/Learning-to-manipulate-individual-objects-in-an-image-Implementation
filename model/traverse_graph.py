@@ -23,7 +23,7 @@ class Traverse_Graph(object):
         ndim_dict = {'tex':self.config.tex_dim, 'mask':self.config.mask_dim, 'bg':self.config.bg_dim}
         self.ndim = ndim_dict[self.config.traverse_type]
 
-        self.traverse_value = list(np.linspace(-1*self.config.traverse_range, self.config.traverse_range, 60))
+        self.traverse_value = list(np.linspace(self.config.traverse_start, self.config.traverse_end, 60))
         self.VAE_outputs = []
         self.traverse_results =  []
 
