@@ -57,7 +57,7 @@ The components are already included in [data/multi\_texture\_data](data/multi_te
 #### Flying Animals
 
 Please download the zip file from 
-this link](https://drive.google.com/open?id=1xs9CdR8HC_RxfuEbZnD_hmMqQusAuhbO), put it in [data/flying\_animals\_data](data/flying_animals_data) and then run the following commands to decode the raw images into .npz file.
+[this link](https://drive.google.com/open?id=1xs9CdR8HC_RxfuEbZnD_hmMqQusAuhbO), put it in [data/flying\_animals\_data](data/flying_animals_data) and then run the following commands to decode the raw images into .npz file.
 ```
 cd  data/flying_animals_data
 unzip data.zip
@@ -67,7 +67,7 @@ These commands generate img_data.npz and img_data_test.npz in [data/flying\_anim
 
 ### Training
 
-To stabilize and speed up adversarial training, our training consists of four steps. Default hyperparameters settings for four datasets and four steps are included in [script/dataset\_name](./doc). Please modify some arguments, e.g. the path of output checkpoints, in scripts when necessary. 
+To stabilize and speed up adversarial training, our training consists of four steps. Default hyperparameters settings for four datasets and four steps are included in script/dataset\_name. Please modify some arguments, e.g. the path of output checkpoints, in scripts when necessary. 
 
 #### 1.Pretrain inpainting network
 
