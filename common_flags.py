@@ -56,7 +56,7 @@ gflags.DEFINE_integer('num_branch', 6, 'output channel of segmentation')
 gflags.DEFINE_integer('nobj', -1, 'number of objects, only used in evaluation or fixed_number training')
 
 #network
-gflags.DEFINE_string('model', 'resnet_v2_50', 'resnet_v2_50 or resnet_v2_101 or segnet')
+gflags.DEFINE_string('model', 'resnet_v2_50', 'resnet_v2_50 or segnet')
 #VAE
 gflags.DEFINE_integer('tex_dim', 4, 'dimension of texture latent space') 
 gflags.DEFINE_integer('mask_dim', 10, 'dimension of mask latent space')
@@ -103,3 +103,4 @@ gflags.DEFINE_float('traverse_start', '-1', 'k z_mean +- k*sigma')
 gflags.DEFINE_float('traverse_end', '1', 'k z_mean +- k*sigma')
 
 gflags.DEFINE_string('VAE_loss','CE','CE or L1')
+gflags.DEFINE_bool('PC', False, 'Experiment for perceptual consistency')

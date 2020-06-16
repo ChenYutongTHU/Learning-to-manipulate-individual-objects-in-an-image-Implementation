@@ -1,5 +1,5 @@
 tensorboard \
---logdir=checkpoint/flying_animals/VAE \
+--logdir=/media/DATA2_6TB/yutong/learning2manip_newinp/tex_pc/bs16_lr1e-4_tex5_beta4_bg5_beta6_mask10_500_2e-5 \
 --port=6106
 #/media/DATA2_6TB/yutong/learning2manip_newinp/fa/bs4_lr1e-4_tex20_beta4_bg30_beta4_mask20_500_5e-5
 #/media/DATA2_6TB/yutong/learning2manip_newinp/tex/bs16_lr1e-4_tex5_beta4_bg5_beta6_mask10_500_2e-5

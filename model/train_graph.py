@@ -157,7 +157,7 @@ class Train_Graph(object):
     def load_training_data(self):
         if self.config.dataset == 'multi_texture':
             return multi_texture_utils.dataset(self.config.root_dir, phase='train',
-                batch_size=self.batch_size, max_num=self.config.max_num)
+                batch_size=self.batch_size, max_num=self.config.max_num, PC=self.config.PC)
         elif self.config.dataset == 'flying_animals':
             return flying_animals_utils.dataset(self.config.root_dir, phase='train',
                 batch_size=self.batch_size, max_num=self.config.max_num)
@@ -171,7 +171,7 @@ class Train_Graph(object):
     def load_val_data(self):
         if self.config.dataset == 'multi_texture':
             return multi_texture_utils.dataset(self.config.root_dir, phase='val',
-                batch_size=8, max_num=self.config.max_num)
+                batch_size=8, max_num=self.config.max_num, PC=self.config.PC)
         elif self.config.dataset == 'flying_animals':
             return flying_animals_utils.dataset(self.config.root_dir, phase='val',
                 batch_size=8, max_num=self.config.max_num)

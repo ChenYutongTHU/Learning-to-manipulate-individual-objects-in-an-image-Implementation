@@ -6,6 +6,9 @@ import os
 import functools
 import scipy.ndimage as ndimage
 H,W=64,64
+pos_choice = [0,-6,6,-12,12,-18,18,-24,24]
+n_pos = 9 
+
 def check_occlusion(pos, pos_list):
     for p in pos_list:
         dist = abs(pos[0]-p[0])+abs(pos[1]-p[1])
@@ -13,21 +16,35 @@ def check_occlusion(pos, pos_list):
             return True
     return False
 
-def generate_params(data_path, num, max_num):
+def generate_params(data_path, num, max_num, PC):
     deterministic_params = []
+    if PC:
+        num = n_pos*n_pos*n_pos*n_pos-1
     for i in range(num):
         param = dict()
-        param['number'] = get_number(random.uniform(0,1))
+        param['number'] = 2 if PC else get_number(random.uniform(0,1))
         param['ind'], param['mat'] = [],[]
         pos_list = []
+
+        dr_=[pos_choice[i%n_pos], pos_choice[((i//n_pos)//n_pos)%n_pos]]
+        dc_=[pos_choice[(i//n_pos)%n_pos], pos_choice[(((i//n_pos)//n_pos)//n_pos)%n_pos]]
+
         for k in range(param['number']):
-            param['ind'].append(random.randint(0,1))  #shape 0 square 1 ellipse
-            dr = random.uniform(-H/2,H/2)
-            dc = random.uniform(-W/2,W/2)
-            while check_occlusion([dr,dc], pos_list):
+            if PC:
+                param['ind'].append(k)
+            else:
+                param['ind'].append(random.randint(0,1))  #shape 0 square 1 ellipse
+            
+            if PC:
+                dr, dc = dr_[k], dc_[k]
+            else:
                 dr = random.uniform(-H/2,H/2)
                 dc = random.uniform(-W/2,W/2)
+                while check_occlusion([dr,dc], pos_list):
+                    dr = random.uniform(-H/2,H/2)
+                    dc = random.uniform(-W/2,W/2)
             pos_list.append([dr,dc])
+
             mat = np.zeros([3,4])
             mat[0][0], mat[0][3] = 1, dr
             mat[1][1], mat[1][3] = 1, dc
@@ -37,7 +54,7 @@ def generate_params(data_path, num, max_num):
         deterministic_params.append(param)
     return deterministic_params
 
-def multi_texture_gen(data_path, max_num=4, deterministic_params=None):
+def multi_texture_gen(data_path, max_num=4, deterministic_params=None, PC=False):
     tex0  = imageio.imread(os.path.join(data_path,'tex.png'))
     tex0 = (tex0/255).astype(np.float32)
     square = imageio.imread(os.path.join(data_path,'square_2.png')).reshape(64,64,1)
@@ -50,23 +67,37 @@ def multi_texture_gen(data_path, max_num=4, deterministic_params=None):
     while True:
         param = deterministic_params[step%(len(deterministic_params))] if deterministic_params else None
         step += 1
-        number = param['number'] if param else get_number(random.uniform(0,1))
+        if param:
+            number = param['number']
+        elif PC:
+            number = 2
+        else:
+            number = get_number(random.uniform(0,1))
         shape_masks = []
         shape_texes = []  #
         cum_mask = np.zeros_like(masks[0])  # occlusion
         pos_list = []
         for i in range(number):  #place the randomly selected and transformed shape on the background in the ascending depth order 
-            ind = param['ind'][i] if param else random.randint(0, 1)  #choose the shape 
+            if param:
+                ind = param['ind'][i] 
+            elif PC:
+                ind = i
+            else:
+                ind = random.randint(0, 1)  #choose the shape 
             shape = masks[ind].copy()
             tex = tex0.copy()
             if param:
                 mat = param['mat'][i]
             else:
-                dr = random.uniform(-H/2,H/2)
-                dc = random.uniform(-W/2,W/2)
-                while check_occlusion([dr,dc], pos_list):
+                if PC:
+                    dr = random.choice(pos_choice)
+                    dc = random.choice(pos_choice)
+                else: 
                     dr = random.uniform(-H/2,H/2)
                     dc = random.uniform(-W/2,W/2)
+                    while check_occlusion([dr,dc], pos_list):
+                        dr = random.uniform(-H/2,H/2)
+                        dc = random.uniform(-W/2,W/2)
                 pos_list.append([dr,dc])
                 mat = np.zeros([3,4])
                 mat[0][0], mat[0][3] = 1, dr
@@ -110,20 +141,23 @@ def combine(number, masks, texes, hue_value, bg,  max_num):
     data['masks'] = tf.transpose(all_masks, perm=[1,2,3,0])  #C H W 1 -> H W 1 C
     return data
 
-def dataset(data_path, batch_size, max_num=4, phase='train'):
+def dataset(data_path, batch_size, max_num=4, phase='train', PC=False):
     """
     Args:
     data_path: the path of combination elements  
     batch_size:
     max_num: max_num: max number of objects in an image
     phase: train: infinitely online generating image/ val: deterministic 200 / test: deterministic 2000
+    PC: experiment for Perceptual consistency
     """
-    assert max_num==4,'please re-assign the distribution in get_number(), multi_texture_utils.py, if you need to reset max_num'
-    
-    deterministic_params = generate_params(data_path, num=200 if phase=='val' else 2000, max_num=max_num) if not phase=='train' else None 
+    if PC:
+        assert max_num==2, 'set max_num as 2 in experiment for Perceptual consistency'
+    else:
+        assert max_num==4,'please re-assign the distribution in get_number(), multi_texture_utils.py, if you need to reset max_num'
+    deterministic_params = generate_params(data_path, num=200 if phase=='val' else 2000, max_num=max_num, PC=PC) if not phase=='train' else None 
 
     partial_fn = functools.partial(multi_texture_gen, 
-      data_path=data_path, max_num=max_num, deterministic_params=deterministic_params)
+      data_path=data_path, max_num=max_num, deterministic_params=deterministic_params, PC=PC)
 
     dataset = tf.data.Dataset.from_generator(
         partial_fn,#(data_path, max_num, zoom, rotation),
@@ -132,8 +166,10 @@ def dataset(data_path, batch_size, max_num=4, phase='train'):
 
     bg0 = imageio.imread(os.path.join(data_path,'bg.png'))
     bg0 = tf.convert_to_tensor(bg0/255, dtype=tf.float32)  #0~1
-    dataset = dataset.map(lambda n,m,t,h: combine(n,m,t,h, bg=bg0,max_num=max_num), num_parallel_calls=tf.data.experimental.AUTOTUNE if phase=='train' else 1)
+    dataset = dataset.map(lambda n,m,t,h: combine(n,m,t,h, bg=bg0,max_num=max_num), num_parallel_calls=1)
     dataset = dataset.batch(batch_size)
     # # print (dataset)
     dataset = dataset.prefetch(10)
     return dataset
+
+

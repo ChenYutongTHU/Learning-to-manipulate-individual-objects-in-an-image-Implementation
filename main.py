@@ -47,6 +47,9 @@ def complete_FLAGS(FLAGS):
         'flying_animals':5}
     FLAGS.img_height, FLAGS.img_width = img_size_dict[FLAGS.dataset]
     FLAGS.max_num = max_num_dict[FLAGS.dataset]
+    if FLAGS.PC and FLAGS.dataset=='multi_texture':
+        FLAGS.max_num=2
+
     if FLAGS.mode == 'pretrain_inpainter':
         FLAGS.num_branch = 2
     else:

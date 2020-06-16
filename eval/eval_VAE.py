@@ -98,7 +98,7 @@ def eval(FLAGS):
                     gif_imgs.append(img)
                     values[j][d] = pad_img(img)
                 name = 'branch{}_var{}.gif'.format(b, d)
-                #imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
+                imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, name), gif_imgs, duration=1/30)
 
             #values  len(traverse_value) * kdim (img)
             value_slices = [np.concatenate(values[j], axis=1) for j in range(len(traverse_value))]  #group different dimensions along the axis x
@@ -107,7 +107,7 @@ def eval(FLAGS):
         merge_slices = [np.concatenate([branches[i][j] for i in range(len(traverse_branch))], axis=0) for j in range(len(traverse_value))]  
 
 
-        imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, 'output.gif'), merge_slices, duration=1/30)
+        #imageio.mimsave(os.path.join(FLAGS.checkpoint_dir, 'output.gif'), merge_slices, duration=1/30)
 
 
         
