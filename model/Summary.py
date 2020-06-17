@@ -164,7 +164,32 @@ def collect_end2end_summary(graph, FLAGS):
         tf.summary.merge(tf.compat.v1.get_collection("end2end_Sum_bg")), \
         tf.summary.merge(tf.compat.v1.get_collection("CIS_eval"))
 
-   
+def collect_PC_summary(graph, FLAGS):
+    ori = graph.image_batch[0] 
+    show_list = [ori]
+    for i in range(FLAGS.num_branch):
+        seg = graph.generated_masks[0,:,:,:,i]*ori
+        show_list.append(seg)
+    show_list = convert2uint8(show_list)
+    tf.compat.v1.summary.image('original image', tf.stack(show_list, axis=0), max_outputs=len(show_list), collections=["PC_Sum"])     
+    
+    for k in range(6):
+        new = graph.new_imgs[k][0,:,:,:] #H W 3
+        show_list = [new]
+        for i in range(FLAGS.num_branch):
+            seg = graph.new_generated_masks[k][0,:,:,:,i]*new
+            show_list.append(seg)
+            show_list.append(tf.tile(graph.new_labels[k][0,:,:,:,i],[1,1,3]))
+        show_list = convert2uint8(show_list)
+        tf.compat.v1.summary.image('perturbed image '+str(k), tf.stack(show_list, axis=0), max_outputs=len(show_list), collections=["PC_Sum"]) 
+    tf.summary.scalar('CIS', graph.loss['CIS'], collections=['PC_Sum'])
+    tf.summary.scalar('Inpainter_Loss', graph.loss['Inpainter'], collections=['PC_Sum'])
+    tf.summary.scalar('PC', graph.loss['PC'], collections=['PC_Sum'])
+    tf.summary.scalar('IoU Validation',graph.loss['EvalIoU_var'], collections=['CIS_eval'])
+    tf.summary.scalar('Identity Switching Rate',graph.switching_rate, collections=['CIS_eval'])
+
+    return tf.summary.merge(tf.compat.v1.get_collection("PC_Sum")), \
+        tf.summary.merge(tf.compat.v1.get_collection("CIS_eval")), \
 
 def collect_inpainter_summary(graph, FLAGS):
     #---------image to show-------------

@@ -3,11 +3,12 @@ import os
 from data import multi_texture_utils, flying_animals_utils, multi_dsprites_utils, objects_room_utils
 from .utils.generic_utils import bin_edge_map, train_op,myprint, myinput, erode_dilate, tf_resize_imgs, tf_normalize_imgs, reorder_mask
 from .utils.loss_utils import Generator_Loss, Inpainter_Loss, Supervised_Generator_Loss
-from .nets import Generator_forward, Inpainter_forward, VAE_forward, Fusion_forward
+from .nets import Generator_forward, Inpainter_forward, VAE_forward, Fusion_forward, Perturbation_forward
 
 mode2scopes = {
     'pretrain_inpainter': ['Inpainter'],
     'train_CIS': ['Inpainter','Generator'],
+    'train_PC': ['Inpainter','Generator'],
     'train_VAE': ['VAE//separate', 'VAE//fusion', 'Fusion'],
     'train_end2end': ['Inpainter','Generator','VAE//separate','VAE//fusion', 'Fusion']
 }
@@ -29,8 +30,8 @@ class Train_Graph(object):
         current_batch = tf.cond(self.is_training, lambda: train_batch, lambda: self.val_iterator.get_next())
 
         self.image_batch, self.GT_masks = current_batch['img'], current_batch['masks']
-        self.image_batch.set_shape([None, self.img_height, self.img_width, 3])
-        self.GT_masks.set_shape([None, self.img_height, self.img_width, 1, None])
+        self.image_batch.set_shape([self.batch_size, self.img_height, self.img_width, 3])
+        self.GT_masks.set_shape([self.batch_size, self.img_height, self.img_width, 1, None])
         if self.config.mode == 'pretrain_inpainter':
             self.generated_masks = self.Random_boxes()
         else:
@@ -54,8 +55,7 @@ class Train_Graph(object):
             #normalize self.image_batch
             self.image_batch = tf_normalize_imgs(self.image_batch)
         #-----------VAE----------------
-        if self.config.mode in ['train_VAE','train_end2end']:
-            self.mask_capacity = tf.placeholder(shape=(), name='mask_capacity', dtype=tf.float32)
+        if self.config.mode in ['train_VAE','train_end2end', 'train_PC']:
             with tf.name_scope("VAE") as scope:
                 #-------------erode dilate  smooth------------
                 filter_masks = []
@@ -72,54 +72,70 @@ class Train_Graph(object):
                     bg_dim=self.config.bg_dim, tex_dim=self.config.tex_dim, mask_dim=self.config.mask_dim, 
                     scope=scope, reuse=None, training=self.is_training)
 
+            if self.config.mode=='train_PC':
+                #----------perceptual consistency---------------
+                self.new_imgs, self.new_labels = Perturbation_forward(image=self.image_batch, masks=self.generated_masks, bg=VAE_outputs['out_bg'])
+                self.new_generated_masks = []
+                PC_loss = []
+                for i in range(6):
+                    with tf.name_scope("Generator/") as scope:
+                        new_masks, new_logits = Generator_forward(self.new_imgs[i], self.config.dataset, 
+                            self.num_branch, model=self.config.model, training=True, reuse=tf.AUTO_REUSE, scope=scope)
+                    self.new_generated_masks.append(new_masks)
+                    loss = tf.nn.softmax_cross_entropy_with_logits(labels=tf.stop_gradient(self.new_labels[i]), 
+                        logits=new_logits) #B H W 1
+                    loss = tf.reduce_sum(loss, axis=[1,2,3])/self.config.batch_size
+                    PC_loss.append(loss)
+                self.loss['PC'] = tf.reduce_mean(tf.stack(PC_loss,axis=0))  #num_var -> average
+                self.loss['CIS'] = self.loss['Generator'] 
+                self.loss['Generator'] = self.loss['CIS'] + self.loss['PC']*self.config.ita
+            else:
+                self.mask_capacity = tf.placeholder(shape=(), name='mask_capacity', dtype=tf.float32)
+                self.loss['tex_kl'], self.loss['mask_kl'], self.loss['bg_kl'] = VAE_loss['tex_kl'], VAE_loss['mask_kl'], VAE_loss['bg_kl']
+                self.loss['tex_kl_sum'], self.loss['bg_kl_sum'] = tf.reduce_sum(VAE_loss['tex_kl']), tf.reduce_sum(VAE_loss['bg_kl'])
+                self.loss['mask_kl_sum'] = tf.abs(tf.reduce_sum(VAE_loss['mask_kl'])-self.mask_capacity)
 
-            self.loss['tex_kl'], self.loss['mask_kl'], self.loss['bg_kl'] = VAE_loss['tex_kl'], VAE_loss['mask_kl'], VAE_loss['bg_kl']
-            self.loss['tex_kl_sum'], self.loss['bg_kl_sum'] = tf.reduce_sum(VAE_loss['tex_kl']), tf.reduce_sum(VAE_loss['bg_kl'])
-            self.loss['mask_kl_sum'] = tf.abs(tf.reduce_sum(VAE_loss['mask_kl'])-self.mask_capacity)
-
-            self.loss['tex_error'], self.loss['mask_error'], self.loss['bg_error'], self.loss['VAE_fusion_error'] = \
-                VAE_loss['tex_error'], VAE_loss['mask_error'], VAE_loss['bg_error'], VAE_loss['fusion_error']
-
-
-            self.loss['VAE//separate/texVAE'] = self.loss['tex_error']+self.config.tex_beta*self.loss['tex_kl_sum']
-            self.loss['VAE//separate/maskVAE'] = self.loss['mask_error']+self.config.mask_gamma*self.loss['mask_kl_sum']
-            self.loss['VAE//separate/bgVAE'] = self.loss['bg_error']+self.config.bg_beta*self.loss['bg_kl_sum']
-            
-            self.loss['VAE//separate'] = self.loss['VAE//separate/texVAE']+self.loss['VAE//separate/maskVAE']+self.loss['VAE//separate/bgVAE']
-            self.loss['VAE//fusion'] = self.loss['VAE_fusion_error']
-
-
-
-            #-----------fuse all branch---------------
-            foregrounds = VAE_outputs['out_fusion'] #B H W 3 (num_branch-1)
-            background_mask = 1-tf.reduce_sum(VAE_outputs['out_masks'], axis=-1, keepdims=True) #B H W 1 1
-            backgrounds = tf.expand_dims(VAE_outputs['out_bg'], axis=-1)*background_mask # B H W 3 1
-
-            fusion_inputs = tf.concat([foregrounds, backgrounds], axis=-1) #B H W 3 fg_branch+1
-            fusion_inputs = tf.reshape(fusion_inputs, [-1,fusion_inputs.get_shape()[1],fusion_inputs.get_shape()[2],3*fusion_inputs.get_shape()[4]])
-
-            with tf.name_scope("Fusion") as scope: 
-                self.fusion_outputs = Fusion_forward(inputs=fusion_inputs, scope=scope, training=self.is_training, reuse=None)
-            Fusion_error = tf.abs(self.fusion_outputs-self.image_batch) #  B H W 3
-            self.loss['Fusion'] = tf.reduce_mean(tf.reduce_sum(Fusion_error, axis=[1,2,3]))  #B -> ,(average on batch)
-
-            self.loss['CIS'] = self.loss['Generator']
-            self.loss['Generator'] = (self.loss['tex_error']+self.loss['mask_error'])*self.config.VAE_weight + \
-                self.loss['CIS']*self.config.CIS_weight
-
-            self.VAE_outtexes, self.VAE_outtex_bg = VAE_outputs['out_texes'], VAE_outputs['out_bg']
-            self.VAE_outmasks = VAE_outputs['out_masks']  #no background  #B H W (num_branch-1)
-            self.VAE_fusion = VAE_outputs['out_fusion']
-
-            if self.config.dataset == 'flying_animals':
-                #resize VAE_out
-                import functools
-                resize = functools.partial(tf_resize_imgs, size=[self.img_height, self.img_width])
-                self.generated_masks, self.image_batch = resize(self.generated_masks), resize(self.image_batch)
-                self.VAE_outtexes, self.VAE_outtex_bg, self.VAE_outmasks = resize(self.VAE_outtexes), resize(self.VAE_outtex_bg), resize(self.VAE_outmasks)
-                self.VAE_fusion, self.fusion_outputs = resize(self.VAE_fusion), resize(self.fusion_outputs)
+                self.loss['tex_error'], self.loss['mask_error'], self.loss['bg_error'], self.loss['VAE_fusion_error'] = \
+                    VAE_loss['tex_error'], VAE_loss['mask_error'], VAE_loss['bg_error'], VAE_loss['fusion_error']
 
 
+                self.loss['VAE//separate/texVAE'] = self.loss['tex_error']+self.config.tex_beta*self.loss['tex_kl_sum']
+                self.loss['VAE//separate/maskVAE'] = self.loss['mask_error']+self.config.mask_gamma*self.loss['mask_kl_sum']
+                self.loss['VAE//separate/bgVAE'] = self.loss['bg_error']+self.config.bg_beta*self.loss['bg_kl_sum']
+                
+                self.loss['VAE//separate'] = self.loss['VAE//separate/texVAE']+self.loss['VAE//separate/maskVAE']+self.loss['VAE//separate/bgVAE']
+                self.loss['VAE//fusion'] = self.loss['VAE_fusion_error']
+
+
+
+                #-----------fuse all branch---------------
+                foregrounds = VAE_outputs['out_fusion'] #B H W 3 (num_branch-1)
+                background_mask = 1-tf.reduce_sum(VAE_outputs['out_masks'], axis=-1, keepdims=True) #B H W 1 1
+                backgrounds = tf.expand_dims(VAE_outputs['out_bg'], axis=-1)*background_mask # B H W 3 1
+
+                fusion_inputs = tf.concat([foregrounds, backgrounds], axis=-1) #B H W 3 fg_branch+1
+                fusion_inputs = tf.reshape(fusion_inputs, [-1,fusion_inputs.get_shape()[1],fusion_inputs.get_shape()[2],3*fusion_inputs.get_shape()[4]])
+
+                with tf.name_scope("Fusion") as scope: 
+                    self.fusion_outputs = Fusion_forward(inputs=fusion_inputs, scope=scope, training=self.is_training, reuse=None)
+                Fusion_error = tf.abs(self.fusion_outputs-self.image_batch) #  B H W 3
+                self.loss['Fusion'] = tf.reduce_mean(tf.reduce_sum(Fusion_error, axis=[1,2,3]))  #B -> ,(average on batch)
+
+                self.loss['CIS'] = self.loss['Generator']
+                self.loss['Generator'] = (self.loss['tex_error']+self.loss['mask_error'])*self.config.VAE_weight + \
+                    self.loss['CIS']*self.config.CIS_weight
+
+                self.VAE_outtexes, self.VAE_outtex_bg = VAE_outputs['out_texes'], VAE_outputs['out_bg']
+                self.VAE_outmasks = VAE_outputs['out_masks']  #no background  #B H W (num_branch-1)
+                self.VAE_fusion = VAE_outputs['out_fusion']
+
+                if self.config.dataset == 'flying_animals':
+                    #resize VAE_out
+                    import functools
+                    resize = functools.partial(tf_resize_imgs, size=[self.img_height, self.img_width])
+                    self.generated_masks, self.image_batch = resize(self.generated_masks), resize(self.image_batch)
+                    self.VAE_outtexes, self.VAE_outtex_bg, self.VAE_outmasks = resize(self.VAE_outtexes), resize(self.VAE_outtex_bg), resize(self.VAE_outmasks)
+                    self.VAE_fusion, self.fusion_outputs = resize(self.VAE_fusion), resize(self.fusion_outputs)
 
         #------------------------------
         with tf.name_scope('train_op'):
@@ -135,6 +151,8 @@ class Train_Graph(object):
             self.loss['Inpainter_branch_var'] = tf.Variable(0.0, name='Inpainter_branch_var')  # do tf.summary
             self.loss['Generator_denominator_var'] = tf.Variable(0.0, name='Generator_denominator_var')
             self.loss['EvalIoU_var'] = tf.Variable(0.0, name='EvalIoU_var')
+            if self.config.mode == 'train_PC':
+                self.switching_rate = tf.Variable(0.0, name='switching_rate')
             if self.config.mode in ['train_VAE','train_end2end']:
                 self.loss['tex_kl_var'] = tf.Variable(0.0, name='tex_kl_var') 
                 self.loss['mask_kl_var'] = tf.Variable(0.0, name='mask_kl_var') 

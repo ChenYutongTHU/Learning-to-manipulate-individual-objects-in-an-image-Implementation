@@ -348,3 +348,35 @@ def Fusion_forward(inputs, scope='Fusion', training=True, reuse=None):
         out = tf.nn.sigmoid(conv4)  
 
         return out
+
+
+def Perturbation_forward(image, masks, bg):
+    B, H, W, C, M = masks.get_shape().as_list()
+    assert M==3
+    k = tf.random.uniform(shape=[], dtype=tf.int32, minval=0, maxval=2) #randomly choose a branch to perturb
+    b = tf.cond(tf.math.equal(k,0), lambda:1, lambda:0)
+    segment = tf.expand_dims(image, axis=-1)*masks #B H W 3 M
+    new_imgs, new_labels = [], []
+    for i in range(6):
+        dx = tf.random.uniform(shape=[B,1],dtype=tf.dtypes.float32, minval=-15, maxval=15)
+        dy = tf.random.uniform(shape=[B,1],dtype=tf.dtypes.float32, minval=-15, maxval=15)   
+        perturbed_mask = tf.contrib.image.translate(masks[:,:,:,:,k], translations=tf.concat([dx,dy], axis=-1)) 
+        perturbed_mask = (1-masks[:,:,:,:,b])*perturbed_mask
+        perturbed = tf.contrib.image.translate(segment[:,:,:,:,k], translations=tf.concat([dx,dy], axis=-1)) 
+        perturbed = perturbed_mask*perturbed
+
+        foregrounds = tf.stack([perturbed, segment[:,:,:,:,b]], axis=-1) #B H W 1 2
+        bg_mask = 1-perturbed_mask-masks[:,:,:,:,b]
+        backgrounds = tf.expand_dims(bg*bg_mask, axis=-1) #B H W 3 1
+        fusion_inputs = tf.concat([foregrounds, backgrounds], axis=-1) #B H W 3 fg_branch+1
+        fusion_inputs = tf.reshape(fusion_inputs, [B,fusion_inputs.get_shape()[1],fusion_inputs.get_shape()[2],-1])
+        fusion_outputs = Fusion_forward(inputs=fusion_inputs, scope='Fusion/', reuse=tf.compat.v1.AUTO_REUSE) #B H W 3
+        
+        new_imgs.append(tf.stop_gradient(fusion_outputs))
+
+        new_masks = tf.cond(tf.math.equal(k,0), 
+                    lambda:tf.stack([perturbed_mask,masks[:,:,:,:,b],bg_mask], axis=-1), 
+                    lambda:tf.stack([masks[:,:,:,:,b],perturbed_mask,bg_mask], axis=-1))
+        new_labels.append(new_masks)
+
+    return new_imgs, new_labels

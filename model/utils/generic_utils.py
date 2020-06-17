@@ -64,13 +64,10 @@ def bin_edge_map(imgs, dataset):
 
 def Permute_IoU(label, pred):
     A, B = label, pred
-    #H W 1 C ndarray
     H,W,nc,N = A.shape
-    #not a real permutation
     ans = 0
     nc = 0 #non-empty channel
-
-    ans_perfg = []
+    ans_perfg, arg_maxIoU = [], []
     for i in range(N):
         src = np.expand_dims(A[:,:,:,i], axis=-1)>0.04 #H W 1 1 #binary
         if np.sum(src) > 4:
@@ -81,11 +78,11 @@ def Permute_IoU(label, pred):
             eps = 1e-8
             IoU = I/(eps+U)
             ans += np.max(IoU)
-            ans_perfg.append(np.max(IoU))
-        else:
-            ans_perfg.append(0)
+            arg_maxIoU.append(np.argmax(IoU))
+        else:  #empty channel
+            arg_maxIoU.append(-1)
     assert nc >0
-    return ans/nc#, ans_perfg  #N,
+    return ans/nc, arg_maxIoU
 
 def train_op(loss, var_list, optimizer, gradient_clip_value=-1):
     grads_and_vars = optimizer.compute_gradients(loss, var_list=var_list)

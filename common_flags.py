@@ -77,6 +77,7 @@ gflags.DEFINE_float('gen_clip_value', -1, 'generator''s grad_clip_value -1 means
 gflags.DEFINE_integer('iters_inp', 1, 'iteration # of inpainter')
 gflags.DEFINE_integer('iters_gen', 3, 'iteration # of generator')
 gflags.DEFINE_integer('iters_gen_vae', 3, 'iteration # of generator and vae  used when training end2end')
+gflags.DEFINE_float('ita',1e-3,'weight of perceptual consistency loss used in train_PC mode')
 
 
 #flying animals (only support)

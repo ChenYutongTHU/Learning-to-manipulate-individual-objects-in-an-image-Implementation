@@ -7,7 +7,7 @@ import sys
 import pprint 
 from common_flags import FLAGS
 import warnings
-from trainer import train_inpainter, train_CIS, train_VAE
+from trainer import train_inpainter, train_CIS, train_VAE, train_PC
 from eval import eval_VAE
 from model.utils.generic_utils import myprint, myinput
 import random
@@ -99,7 +99,7 @@ def main(argv):
             save_log(FLAGS.sh_path, FLAGS.checkpoint_dir, print_flags_dict, sha)
 
         
-        assert FLAGS.mode in ['pretrain_inpainter','train_CIS', 'train_VAE', 'train_end2end'
+        assert FLAGS.mode in ['pretrain_inpainter','train_CIS', 'train_VAE', 'train_PC', 'train_end2end'
             'eval_CIS', 'eval_VAE']
         
         if FLAGS.mode == 'pretrain_inpainter':
@@ -110,6 +110,8 @@ def main(argv):
             eval_VAE.eval(FLAGS)
         # elif FLAGS.mode == 'train_end2end':
         #     train_end2end.train(FLAGS)
+        elif FLAGS.mode == 'train_PC':
+            train_PC.train(FLAGS)
         elif FLAGS.mode == 'train_VAE':
             train_VAE.train(FLAGS)
         else:
