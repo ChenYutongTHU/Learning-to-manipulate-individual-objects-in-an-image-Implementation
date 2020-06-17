@@ -260,14 +260,15 @@ def gaussian_kl(mean, log_sigma_sq):
                                    - tf.exp(log_sigma_sq))  #B*Z_dim
     return latent_loss # B*z_dim
 
-def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None, training=True):
+def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None, training=True, aug=False):
     B, H, W, C = image.get_shape().as_list()
     num_branch = masks.get_shape().as_list()[-1]  #B H W 1 M 
 
     with tf.compat.v1.variable_scope(scope, reuse=reuse):   
         tex_kl, out_texes = [],[]
-        mask_kl, out_masks_logit = [], []
+        mask_kl, aug_out_masks_logit, out_masks_logit = [], [], []
         fusion_error, out_fusion = [], []
+        aug_masks_label = []
 
         for i in range(num_branch):
             
@@ -281,8 +282,19 @@ def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None
             inputs = masks[:,:,:,:,i]
             with tf.compat.v1.variable_scope('separate/maskVAE', reuse=tf.compat.v1.AUTO_REUSE):
                 z_mean, z_log_sigma_sq, out_logit = encoder_decoder(inputs, output_ch=1, latent_dim=mask_dim,  training=training) 
+            if aug:
+                rep = 2
+                dx = tf.random.uniform(shape=[rep*B,1],dtype=tf.dtypes.float32,minval=-1*20,maxval=20)
+                dy = tf.random.uniform(shape=[rep*B,1],dtype=tf.dtypes.float32,minval=-1*20,maxval=20)
+                aug_mask = tf.tile(inputs, [rep,1,1,1]) #7*B H W 3
+                aug_mask = tf.contrib.image.translate(aug_mask,translations=tf.concat([dx,dy], axis=-1),interpolation='NEAREST')
+                with tf.compat.v1.variable_scope('separate/maskVAE', reuse=tf.compat.v1.AUTO_REUSE):
+                    z_mean, z_log_sigma_sq, aug_out_logit = encoder_decoder(aug_mask, output_ch=1, latent_dim=mask_dim,  training=training) 
+                aug_out_masks_logit.append(aug_out_logit)
+                aug_masks_label.append(aug_mask)
             out_masks_logit.append(out_logit)
-            mask_kl.append(tf.reduce_mean(gaussian_kl(z_mean, z_log_sigma_sq), 0))           
+            mask_kl.append(tf.reduce_mean(gaussian_kl(z_mean, z_log_sigma_sq), 0))             
+
 
 
             #fuse tex and mask
@@ -302,9 +314,14 @@ def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None
         out_texes = tf.stack(out_texes, axis=-1) # B H W 3 M
         tex_error = tf.reduce_mean(region_error(X=out_texes, Y=image, region=masks)) #BHW3M BHW3 BHW1M ->B,M -> scalar
 
+
         out_masks_logit = tf.stack(out_masks_logit, axis=-1) #B H W 1 M
         out_masks = tf.nn.sigmoid(out_masks_logit) #B H W 1 M
-        mask_error_pixel = tf.nn.sigmoid_cross_entropy_with_logits(labels=masks, logits=out_masks_logit) #B H W 1 M
+        if aug:
+            mask_error_pixel = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.stack(aug_masks_label, axis=-1), 
+                        logits=tf.stack(aug_out_masks_logit, axis=-1)) #B H W 1 M
+        else:
+            mask_error_pixel = tf.nn.sigmoid_cross_entropy_with_logits(labels=masks, logits=out_masks_logit) #B H W 1 M
         mask_error_sum = tf.reduce_sum(mask_error_pixel, axis=[1,2,3]) #B,M
         mask_error = tf.reduce_mean(mask_error_sum)
         

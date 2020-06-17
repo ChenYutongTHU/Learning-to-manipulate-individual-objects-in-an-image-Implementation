@@ -70,7 +70,7 @@ class Train_Graph(object):
 
                 VAE_loss, VAE_outputs = VAE_forward(image=self.image_batch, masks=self.generated_masks[:,:,:,:,:-1*self.config.n_bg],  
                     bg_dim=self.config.bg_dim, tex_dim=self.config.tex_dim, mask_dim=self.config.mask_dim, 
-                    scope=scope, reuse=None, training=self.is_training)
+                    scope=scope, reuse=None, training=self.is_training, aug=self.config.PC)
 
             if self.config.mode=='train_PC':
                 #----------perceptual consistency---------------
