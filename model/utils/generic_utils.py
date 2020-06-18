@@ -32,10 +32,12 @@ def tf_resize_imgs(imgs, size):
         return resize_imgs
 
 def reorder_mask(masks):
-    #put background segmentation in the last num of channels
+    #put background segmentation at the last channels
+    B, H, W, C, M = masks.get_shape().as_list()
     pixel_sum = tf.reduce_sum(masks, axis=[0,1,2,3]) #C,
-    indices = tf.argsort(values=pixel_sum, direction='ASCENDING') #[1]
-    reordered = tf.gather(masks, indices, axis=-1)
+    ind = tf.math.argmax(pixel_sum)
+    reordered = tf.concat([masks[:,:,:,:,0:ind],masks[:,:,:,:,ind+1:],masks[:,:,:,:,ind:ind+1]], axis=-1)
+    reordered.set_shape([B,H,W,C,M])
     return  reordered
 
 def myprint(string):

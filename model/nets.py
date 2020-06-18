@@ -260,15 +260,15 @@ def gaussian_kl(mean, log_sigma_sq):
                                    - tf.exp(log_sigma_sq))  #B*Z_dim
     return latent_loss # B*z_dim
 
-def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None, training=True, aug=False):
+def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None, training=True):
     B, H, W, C = image.get_shape().as_list()
     num_branch = masks.get_shape().as_list()[-1]  #B H W 1 M 
 
     with tf.compat.v1.variable_scope(scope, reuse=reuse):   
         tex_kl, out_texes = [],[]
-        mask_kl, aug_out_masks_logit, out_masks_logit = [], [], []
+        mask_kl, out_masks_logit = [], []
         fusion_error, out_fusion = [], []
-        aug_masks_label = []
+        latent_zs = {'tex':[], 'mask':[], 'bg':None}
 
         for i in range(num_branch):
             
@@ -278,24 +278,14 @@ def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None
                 z_mean, z_log_sigma_sq, out_logit = encoder_decoder(inputs, output_ch=3, latent_dim=tex_dim, training=training)
             out_texes.append(tf.nn.sigmoid(out_logit)) #B,
             tex_kl.append(tf.reduce_mean(gaussian_kl(z_mean, z_log_sigma_sq), 0))  #B,dim -> dim
+            latent_zs['tex'].append(z_mean)
 
             inputs = masks[:,:,:,:,i]
             with tf.compat.v1.variable_scope('separate/maskVAE', reuse=tf.compat.v1.AUTO_REUSE):
                 z_mean, z_log_sigma_sq, out_logit = encoder_decoder(inputs, output_ch=1, latent_dim=mask_dim,  training=training) 
-            if aug:
-                rep = 2
-                dx = tf.random.uniform(shape=[rep*B,1],dtype=tf.dtypes.float32,minval=-1*20,maxval=20)
-                dy = tf.random.uniform(shape=[rep*B,1],dtype=tf.dtypes.float32,minval=-1*20,maxval=20)
-                aug_mask = tf.tile(inputs, [rep,1,1,1]) #7*B H W 3
-                aug_mask = tf.contrib.image.translate(aug_mask,translations=tf.concat([dx,dy], axis=-1),interpolation='NEAREST')
-                with tf.compat.v1.variable_scope('separate/maskVAE', reuse=tf.compat.v1.AUTO_REUSE):
-                    z_mean, z_log_sigma_sq, aug_out_logit = encoder_decoder(aug_mask, output_ch=1, latent_dim=mask_dim,  training=training) 
-                aug_out_masks_logit.append(aug_out_logit)
-                aug_masks_label.append(aug_mask)
             out_masks_logit.append(out_logit)
-            mask_kl.append(tf.reduce_mean(gaussian_kl(z_mean, z_log_sigma_sq), 0))             
-
-
+            mask_kl.append(tf.reduce_mean(gaussian_kl(z_mean, z_log_sigma_sq), 0))           
+            latent_zs['mask'].append(z_mean)
 
             #fuse tex and mask
             tex, mask = out_texes[-1], tf.nn.sigmoid(out_masks_logit[-1]) #B H W 3 B H W 1
@@ -314,14 +304,9 @@ def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None
         out_texes = tf.stack(out_texes, axis=-1) # B H W 3 M
         tex_error = tf.reduce_mean(region_error(X=out_texes, Y=image, region=masks)) #BHW3M BHW3 BHW1M ->B,M -> scalar
 
-
         out_masks_logit = tf.stack(out_masks_logit, axis=-1) #B H W 1 M
         out_masks = tf.nn.sigmoid(out_masks_logit) #B H W 1 M
-        if aug:
-            mask_error_pixel = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.stack(aug_masks_label, axis=-1), 
-                        logits=tf.stack(aug_out_masks_logit, axis=-1)) #B H W 1 M
-        else:
-            mask_error_pixel = tf.nn.sigmoid_cross_entropy_with_logits(labels=masks, logits=out_masks_logit) #B H W 1 M
+        mask_error_pixel = tf.nn.sigmoid_cross_entropy_with_logits(labels=masks, logits=out_masks_logit) #B H W 1 M
         mask_error_sum = tf.reduce_sum(mask_error_pixel, axis=[1,2,3]) #B,M
         mask_error = tf.reduce_mean(mask_error_sum)
         
@@ -336,11 +321,16 @@ def VAE_forward(image, masks, bg_dim, tex_dim, mask_dim, scope='VAE', reuse=None
             out_bg = tf.nn.sigmoid(out_logit)
             bg_error = tf.reduce_mean(region_error(X=out_bg, Y=image, region=tf.expand_dims(bg_mask, axis=-1)))
             bg_kl= tf.reduce_mean(gaussian_kl(z_mean, z_log_sigma_sq), 0) #B,dim -> dim
-    
+            latent_zs['bg'] = z_mean
+
     loss = {'mask_kl': mask_kl, 'tex_kl': tex_kl, 'bg_kl':bg_kl, 
         'mask_error':mask_error, 'tex_error': tex_error, 'bg_error': bg_error , 'fusion_error': fusion_error}
     outputs = {'out_masks': out_masks, 'out_texes': out_texes, 'out_bg': out_bg, 'out_fusion': out_fusion}
-    return loss, outputs
+    latent_zs['tex'] = tf.stack(latent_zs['tex'], axis=0) #branch-1, B, dim
+    latent_zs['mask'] = tf.stack(latent_zs['mask'], axis=0) #branch-1 B dim
+
+    return loss, outputs, latent_zs
+
 
 def Fusion_forward(inputs, scope='Fusion', training=True, reuse=None):
     #inputs B H W N*C
@@ -367,33 +357,57 @@ def Fusion_forward(inputs, scope='Fusion', training=True, reuse=None):
         return out
 
 
-def Perturbation_forward(image, masks, bg):
-    B, H, W, C, M = masks.get_shape().as_list()
+def Perturbation_forward(var_num, image, generated_masks,VAE_outputs0, latent_zs, mask_top_dims, scope='VAE/'):
+    B, H, W, C, M = generated_masks.get_shape().as_list()
     assert M==3
-    k = tf.random.uniform(shape=[], dtype=tf.int32, minval=0, maxval=2) #randomly choose a branch to perturb
+    mask_dim = latent_zs['mask'][0].get_shape().as_list()[1]
+    tex_dim = latent_zs['tex'][0].get_shape().as_list()[1]
+    k = tf.random.uniform(shape=[], dtype=tf.int32, minval=0, maxval=2)
     b = tf.cond(tf.math.equal(k,0), lambda:1, lambda:0)
-    segment = tf.expand_dims(image, axis=-1)*masks #B H W 3 M
-    new_imgs, new_labels = [], []
-    for i in range(6):
-        dx = tf.random.uniform(shape=[B,1],dtype=tf.dtypes.float32, minval=-15, maxval=15)
-        dy = tf.random.uniform(shape=[B,1],dtype=tf.dtypes.float32, minval=-15, maxval=15)   
-        perturbed_mask = tf.contrib.image.translate(masks[:,:,:,:,k], translations=tf.concat([dx,dy], axis=-1)) 
-        perturbed_mask = (1-masks[:,:,:,:,b])*perturbed_mask
-        perturbed = tf.contrib.image.translate(segment[:,:,:,:,k], translations=tf.concat([dx,dy], axis=-1)) 
-        perturbed = perturbed_mask*perturbed
 
-        foregrounds = tf.stack([perturbed, segment[:,:,:,:,b]], axis=-1) #B H W 1 2
-        bg_mask = 1-perturbed_mask-masks[:,:,:,:,b]
-        backgrounds = tf.expand_dims(bg*bg_mask, axis=-1) #B H W 3 1
+    new_outs, new_labels = [], []
+    for i in range(var_num):
+        # tex_delta_z = tf.random.uniform(shape=[B,1], dtype=tf.float32, minval=-1, maxval=1) #B,1
+        # tex_z0 = tf.concat([latent_zs['tex'][0][:,:tex_top_dim], 
+        #     latent_zs['tex'][0][:,tex_top_dim:tex_top_dim+1]+tex_delta_z,
+        #     latent_zs['tex'][0][:,tex_top_dim+1:]], axis=-1) #B, tex_dim
+        # with tf.compat.v1.variable_scope(scope+'/separate/texVAE', reuse=tf.compat.v1.AUTO_REUSE):
+        #     new_tex_logit = decoder(z=tex_z0, output_ch=3, latent_dim=tex_dim, x=image, training=training)
+        #     new_tex = tf.nn.sigmoid(new_tex_logit) #B,
+
+        dim_x, dim_y = mask_top_dims[0], mask_top_dims[1]
+        new_x = tf.random.uniform(shape=[B,1], dtype=tf.float32, minval=-1, maxval=1) #B,1
+        new_y = tf.random.uniform(shape=[B,1], dtype=tf.float32, minval=-1, maxval=1) #B,1
+        mask_z = tf.concat([latent_zs['mask'][k,:,:dim_x],
+            new_x,
+            latent_zs['mask'][k,:,dim_x+1:dim_y],
+            new_y,
+            latent_zs['mask'][k,:,dim_y+1:]], axis=-1)
+
+        with tf.compat.v1.variable_scope(scope+'/separate/maskVAE', reuse=tf.compat.v1.AUTO_REUSE):
+            new_mask_logit = decoder(z=mask_z, output_ch=1, latent_dim=mask_dim, x=image, training=True)
+            new_mask = tf.nn.sigmoid(new_mask_logit) #B H W 1
+        
+        another_mask = VAE_outputs0['out_masks'][:,:,:,:,b]
+        new_mask = (1-another_mask)*new_mask
+        bg_mask = 1-new_mask-another_mask 
+        new_masks = tf.cond(tf.math.equal(k,0), 
+                            lambda:tf.stack([new_mask,another_mask,bg_mask], axis=-1), 
+                            lambda:tf.stack([another_mask,new_mask,bg_mask], axis=-1))
+
+        with tf.compat.v1.variable_scope(scope+'/fusion', reuse=tf.compat.v1.AUTO_REUSE):
+            new_fus_output, null = tex_mask_fusion(VAE_outputs0['out_texes'][:,:,:,:,k], new_mask) #B H W 3 
+
+        foregrounds = tf.stack([new_fus_output, VAE_outputs0['out_fusion'][:,:,:,:,b]], axis=-1) #B H W 3 M
+        backgrounds = tf.expand_dims(VAE_outputs0['out_bg'], axis=-1)* \
+                    tf.expand_dims(bg_mask, axis=-1)
+
         fusion_inputs = tf.concat([foregrounds, backgrounds], axis=-1) #B H W 3 fg_branch+1
         fusion_inputs = tf.reshape(fusion_inputs, [B,fusion_inputs.get_shape()[1],fusion_inputs.get_shape()[2],-1])
-        fusion_outputs = Fusion_forward(inputs=fusion_inputs, scope='Fusion/', reuse=tf.compat.v1.AUTO_REUSE) #B H W 3
-        
-        new_imgs.append(tf.stop_gradient(fusion_outputs))
-
-        new_masks = tf.cond(tf.math.equal(k,0), 
-                    lambda:tf.stack([perturbed_mask,masks[:,:,:,:,b],bg_mask], axis=-1), 
-                    lambda:tf.stack([masks[:,:,:,:,b],perturbed_mask,bg_mask], axis=-1))
+        fusion_outputs = Fusion_forward(inputs=fusion_inputs, scope='Fusion/', training=True, reuse=tf.compat.v1.AUTO_REUSE) #B H W 3
+        new_outs.append(fusion_outputs)
         new_labels.append(new_masks)
 
-    return new_imgs, new_labels
+    #new_latentzs = {'tex':tex_z1, 'mask':mask_z1} #B,dim
+    return new_outs, new_labels#, new_latentzs
+

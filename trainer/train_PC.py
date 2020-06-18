@@ -21,6 +21,7 @@ def train(FLAGS):
     saver_vars = [v for v in tf.global_variables('Inpainter')+tf.global_variables('Generator')+ \
             tf.global_variables('VAE') + tf.global_variables('Fusion') if not 'Adam' in v.op.name] 
     saver = tf.train.Saver(saver_vars, max_to_keep=100)
+
     sv = tf.train.Supervisor(logdir=os.path.join(FLAGS.checkpoint_dir, "end2end_Sum"),
                                  saver=None, save_summaries_secs=0) 
 
@@ -28,6 +29,9 @@ def train(FLAGS):
         assert os.path.isfile(FLAGS.fullmodel_ckpt+'.index')
         saver.restore(sess, FLAGS.fullmodel_ckpt)
         myprint ("Finetune model {} for perceptual consistency".format(FLAGS.fullmodel_ckpt))
+
+
+        saver.save(sess, os.path.join(FLAGS.checkpoint_dir,'newmodel'), global_step=0)
         myinput('Press enter to continue')
 
         start_time = time.time()

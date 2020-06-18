@@ -68,13 +68,19 @@ class Train_Graph(object):
                     self.image_batch = tf_resize_imgs(self.image_batch, size=[self.img_height//2,self.img_width//2])
                     self.generated_masks = tf_resize_imgs(self.generated_masks, size=[self.img_height//2, self.img_width//2])
 
-                VAE_loss, VAE_outputs = VAE_forward(image=self.image_batch, masks=self.generated_masks[:,:,:,:,:-1*self.config.n_bg],  
+                VAE_loss, VAE_outputs, latent_zs = VAE_forward(image=self.image_batch, masks=self.generated_masks[:,:,:,:,:-1*self.config.n_bg],  
                     bg_dim=self.config.bg_dim, tex_dim=self.config.tex_dim, mask_dim=self.config.mask_dim, 
-                    scope=scope, reuse=None, training=self.is_training, aug=self.config.PC)
+                    scope=scope, reuse=None, training=self.is_training)
 
             if self.config.mode=='train_PC':
                 #----------perceptual consistency---------------
-                self.new_imgs, self.new_labels = Perturbation_forward(image=self.image_batch, masks=self.generated_masks, bg=VAE_outputs['out_bg'])
+                mask_top_dims = tf.sort(tf.math.top_k(input=VAE_loss['mask_kl'], k=2)[1]) 
+                # choose latent dimensions with highest kl divergence to perturb, as those dimensions have semantic meanings
+                self.new_imgs, self.new_labels = Perturbation_forward(
+                    var_num=6, image=self.image_batch, generated_masks=self.generated_masks, 
+                    VAE_outputs0 = VAE_outputs, latent_zs = latent_zs,
+                    mask_top_dims=mask_top_dims)
+
                 self.new_generated_masks = []
                 PC_loss = []
                 for i in range(6):
