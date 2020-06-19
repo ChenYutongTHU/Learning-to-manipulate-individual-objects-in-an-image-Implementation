@@ -121,14 +121,11 @@ sh script/dataset_name/disentanglement.sh
 Modify some of the arguments when necessary to set which objects and dimensions to perturb and the range of varying latent factors.
 
 ### Perceptual cycle-consistency
-We demonstrate the effectiveness of perceptual cycle-consistency constrain on Multi-Texture with each image including two objects of different identities, ellipse and square. Training scripts of the experiments are provided in [scripts/PC](./ scripts/PC). The first three training steps are the same as mentioned in (./README.md#Training) without enforcing perceptual cycle-consistency constrain. Then we finetune the model with perceptual cycle-consistency constrain by running [scripts/PC/](./ scripts/PC). It can be observed that the finetuning decreases identity switching rate and improves identity consistency. In the figure below, we compare the segmentation behaviors between two models before and after the finetuning by visualizing their channel 0¡¯s segmentation for the same image sequence. Note that finetuned model (middle) consistently captures ellipse in channel 0 while un-finetuned model (right) can assign square to channel 0 sometimes.
+We demonstrate the effectiveness of perceptual cycle-consistency constrain on Multi-Texture with each image including two objects of different identities, ellipse and square. Training scripts of the experiments are provided in  [test\_segmentation.py](./test_segmentation.py) [script/PC](./ script/PC). The first three training steps are the same as mentioned in [Training](./README.md#Training) without enforcing perceptual cycle-consistency constrain. Then we finetune the model with perceptual cycle-consistency constrain by running [script/PC/finetune_PC.py](./doc). It can be observed that the finetuning decreases identity switching rate and improves identity consistency. As shown in the figure below, finetuned model (middle) consistently captures the ellipse in channel 0 while un-finetuned model (right) can assign the square to channel 0 sometimes.
 <p align="center">
 <img src='doc/pc.gif'>
 <p>
- 
-
-
-To compute identity switching, run [script/dataset_name/test_segmentation.sh] (script/pc/test_segmentation.sh) to compute identity switching rate of the tested segmentation network.)  We provide checkpoints for two models in . If you¡¯d like to explore the effectiveness by yourself, we recommend downloading the model that has been trained for the first three steps and finetuning it using [scripts/PC/](./ scripts/PC).
+To compute identity switching, run [script/dataset_name/test_segmentation.sh] (script/pc/test_segmentation.sh) to compute identity switching rate of the tested segmentation network.  We provide checkpoints for two models [here](). If you'd like to explore the effectiveness by yourself, we recommend downloading the model that has been trained for the first three steps and finetuning it using [scripts/PC/](./ scripts/PC).
 
 ## Downloads
 ## Citation
