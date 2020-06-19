@@ -6,7 +6,7 @@ import os
 import functools
 import scipy.ndimage as ndimage
 H,W=64,64
-pos_choice = [0,-6,6,-12,12,-18,18,-24,24]
+pos_choice = [-24,-18,-12,-6,0,6,12,18,24]
 n_pos = 9 
 
 def check_occlusion(pos, pos_list):
@@ -50,7 +50,7 @@ def generate_params(data_path, num, max_num, PC):
             mat[1][1], mat[1][3] = 1, dc
             mat[2][2] = 1
             param['mat'].append(mat)
-        param['hue'] = [random.uniform(-0.45,0.45) for h_ in range(max_num+1)]
+        param['hue'] = [-0.2,0,0.2] if PC  else [random.uniform(-0.45,0.45) for h_ in range(max_num+1)]
         deterministic_params.append(param)
     return deterministic_params
 
