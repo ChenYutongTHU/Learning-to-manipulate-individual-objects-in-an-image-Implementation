@@ -134,7 +134,7 @@ data/multi_dsprites_data/*.tfrecords
 
 save_checkpoint/
 checkpoint/
-script/
+script0/
 tb.sh
 resnet/
 *_select/

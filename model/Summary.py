@@ -138,14 +138,14 @@ def collect_end2end_summary(graph, FLAGS):
     #tf.summary.scalar('CIS', graph.loss['CIS'], collections=['end2end_Sum'])
     #tf.summary.scalar('Inpainter_Loss', graph.loss['Inpainter'], collections=['end2end_Sum'])
     tf.summary.scalar('Tex_error', graph.loss['tex_error'], collections=["end2end_Sum"])
-    #tf.summary.scalar('Mask_error', graph.loss['mask_error'], collections=["end2end_Sum"])
+    tf.summary.scalar('Mask_error', graph.loss['mask_error'], collections=["end2end_Sum"])
     tf.summary.scalar('BG_error', graph.loss['bg_error'], collections=["end2end_Sum"])
 
     tf.summary.scalar('VAEFusion_error', graph.loss['VAE_fusion_error'], collections=["end2end_Sum"])
     tf.summary.scalar('Fusion_Loss', graph.loss['Fusion'], collections=["end2end_Sum"])
 
     tf.summary.scalar('Tex_latent_space', graph.loss['tex_kl_var'], collections=['end2end_Sum_tex'])
-    #tf.summary.scalar('Mask_latent_space', graph.loss['mask_kl_var'], collections=['end2end_Sum_mask'])
+    tf.summary.scalar('Mask_latent_space', graph.loss['mask_kl_var'], collections=['end2end_Sum_mask'])
     tf.summary.scalar('BG_latent_space', graph.loss['bg_kl_var'], collections=['end2end_Sum_bg'])
 
     tf.summary.scalar('IoU Validation',graph.loss['EvalIoU_var'], collections=['CIS_eval'])
