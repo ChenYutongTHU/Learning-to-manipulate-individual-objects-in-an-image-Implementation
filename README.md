@@ -67,7 +67,7 @@ These commands generate img_data.npz and img_data_test.npz in [data/flying\_anim
 
 ### Training
 
-To stabilize and speed up adversarial training, our training consists of four steps. Default hyperparameters settings for four datasets and four steps are included in script/dataset\_name. Please modify some arguments, e.g. the path of output checkpoints, in scripts when necessary. 
+To stabilize and speed up adversarial training, our training consists of three steps. Default hyperparameters settings for four datasets and three steps are included in [script/](script). Please modify some arguments, e.g. the path of output checkpoints, in scripts when necessary. 
 
 #### 1.Pretrain inpainting network
 
@@ -75,7 +75,7 @@ Pretrain inpainting network on the task of predicting pixels on box-shaped occlu
 ```
 sh script/dataset_name/pretrain_inpainter.sh
 ```
-Pretrained checkpoints of inpainting network for each dataset can be downloaded [here](). You can directly restore the downloaded checkpoint to skip this step.
+Pretrained checkpoints of inpainting network for each dataset can be downloaded [here](https://drive.google.com/drive/folders/1AcFb2kfFpEuD-Wi_Iz_Z9-mkgs3anEOF?usp=sharing). You can directly restore the downloaded checkpoint to skip this step.
 
 #### 2.Spatial disentanglement
 
@@ -95,13 +95,7 @@ tar -xvf resnet_v2_50_2017_04_14.tar.gz
 ```
 sh script/dataset_name/train_VAE.sh
 ```
-Train encoder and decoder with segmentation network fixed to learn disentangled latent space.
-
-#### 4.End2end finetune
-```
-sh script/dataset_name/train_end2end.sh
-```
-Jointly train all modules.
+Train encoder and decoder to learn disentangled latent space.
 
 ### IoU Evaluation
 
@@ -121,12 +115,27 @@ sh script/dataset_name/disentanglement.sh
 Modify some of the arguments when necessary to set which objects and dimensions to perturb and the range of varying latent factors.
 
 ### Perceptual cycle-consistency
-We demonstrate the effectiveness of perceptual cycle-consistency constrain on Multi-Texture with each image including two objects of different identities, ellipse and square. Training scripts of the experiments are provided in  [test\_segmentation.py](./test_segmentation.py) [script/PC](./ script/PC). The first three training steps are the same as mentioned in [Training](./README.md#Training) without enforcing perceptual cycle-consistency constrain. Then we finetune the model with perceptual cycle-consistency constrain by running [script/PC/finetune_PC.py](./doc). It can be observed that the finetuning decreases identity switching rate and improves identity consistency. As shown in the figure below, finetuned model (middle) consistently captures the ellipse in channel 0 while un-finetuned model (right) can assign the square to channel 0 sometimes.
+We demonstrate the effectiveness of perceptual cycle-consistency constrain on Multi-Texture with each image including two objects of different identities, ellipse and square. Training scripts of the experiments are provided in [script/multi_texture/perceptual_consistency](./script/multi_texture/perceptual_consistency). The first three training steps are the same as mentioned in [Training](./README.md#Training) without enforcing perceptual cycle-consistency. Then we finetune the model with perceptual cycle-consistency constrain by running [script/multi_texture/perceptual_consistency/finetune_PC.sh](script/multi_texture/perceptual_consistency/finetune_PC.sh). It can be observed that the finetuning decreases identity switching rate and improves identity consistency. As shown in the figure below, finetuned model (middle) consistently captures the ellipse in channel 0 while un-finetuned model (right) can assign the square to channel 0 sometimes.
+
 <p align="center">
 <img src='doc/pc.gif'>
 <p>
-To compute identity switching, run [script/dataset_name/test_segmentation.sh] (script/pc/test_segmentation.sh) to compute identity switching rate of the tested segmentation network.  We provide checkpoints for two models [here](). If you'd like to explore the effectiveness by yourself, we recommend downloading the model that has been trained for the first three steps and finetuning it using [scripts/PC/](./ scripts/PC).
+ 
+To compute identity switching rate, run [script/multi_texture/perceptual_consistency/test_segmentation.sh](script/multi_texture/perceptual_consistency/test_segmentation.sh) to compute identity switching rate of the tested segmentation network.  We provide checkpoints for two models [here](https://drive.google.com/drive/folders/1WCBgnPim9l5aMjbgAg1wBETd3QoLY-Wd?usp=sharing). If you'd like to explore the effectiveness by yourself, we recommend downloading the [model](https://drive.google.com/drive/folders/1X5kDp-1swauBKaFXF32gRy9wnJEvtCKe?usp=sharing) that has been trained for the first three steps and restoring it to finetune with perceptual consistency.
 
 ## Downloads
+
+You can download our trained models for all datasets [here](https://drive.google.com/drive/folders/1AcFb2kfFpEuD-Wi_Iz_Z9-mkgs3anEOF?usp=sharing) including pretrained inpainting networks and final checkpoints of all modules. 
+
 ## Citation
+
+If you use this code in academic context, please cite the following publication:
+
+@InProceedings{Yang_2020_CVPR,
+author = {Yang, Yanchao and Chen, Yutong and Soatto, Stefano},
+title = {Learning to Manipulate Individual Objects in an Image},
+booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+month = {June},
+year = {2020}
+}
 
