@@ -169,10 +169,8 @@ def generator_segnet(images, num_mask, scope, reuse=None, training=True, div=10.
         x   = gen_conv(x, mask_channels, 3, 1, activation=tf.identity,
                      name='conv17', training=training)
         # Division by constant experimentally improved training
-        x = tf.divide(x, tf.constant(div))   #?????
+        x = tf.divide(x, tf.constant(div))   
         generated_mask = tf.nn.softmax(x, axis=-1)  #soft mask normalization  #B*H*W*num_mask
-        # get logits for probability 1
-        #generated_mask = tf.expand_dims(generated_mask[:,:,:,0], axis=-1)
         return generated_mask, x 
 
 
@@ -389,13 +387,6 @@ def Perturbation_forward(var_num, image, generated_masks,VAE_outputs0, latent_zs
 
     new_outs, new_labels = [], []
     for i in range(var_num):
-        # tex_delta_z = tf.random.uniform(shape=[B,1], dtype=tf.float32, minval=-1, maxval=1) #B,1
-        # tex_z0 = tf.concat([latent_zs['tex'][0][:,:tex_top_dim], 
-        #     latent_zs['tex'][0][:,tex_top_dim:tex_top_dim+1]+tex_delta_z,
-        #     latent_zs['tex'][0][:,tex_top_dim+1:]], axis=-1) #B, tex_dim
-        # with tf.compat.v1.variable_scope(scope+'/separate/texVAE', reuse=tf.compat.v1.AUTO_REUSE):
-        #     new_tex_logit = decoder(z=tex_z0, output_ch=3, latent_dim=tex_dim, x=image, training=training)
-        #     new_tex = tf.nn.sigmoid(new_tex_logit) #B,
 
         dim_x, dim_y = mask_top_dims[0], mask_top_dims[1]
         new_x = tf.random.uniform(shape=[B,1], dtype=tf.float32, minval=-1, maxval=1) #B,1
@@ -430,6 +421,5 @@ def Perturbation_forward(var_num, image, generated_masks,VAE_outputs0, latent_zs
         new_outs.append(fusion_outputs)
         new_labels.append(new_masks)
 
-    #new_latentzs = {'tex':tex_z1, 'mask':mask_z1} #B,dim
-    return new_outs, new_labels#, new_latentzs
+    return new_outs, new_labels
 
