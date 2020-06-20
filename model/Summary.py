@@ -69,6 +69,7 @@ def collect_VAE_summary(graph, FLAGS):
     show_list = convert2uint8([ori, fusion])
     tf.compat.v1.summary.image('image output', tf.stack(show_list, axis=0), max_outputs=len(show_list), collections=["VAE_Sum"])
 
+
     seg_masks = tf.transpose(graph.generated_masks[0,:,:,:,:]*tf.expand_dims(ori, axis=-1),[3,0,1,2]) #N H W 3
     tf.compat.v1.summary.image('segmentation', tf.cast(seg_masks*255,tf.uint8), max_outputs=FLAGS.num_branch, collections=["VAE_Sum"])
 

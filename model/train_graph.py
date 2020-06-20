@@ -70,8 +70,8 @@ class Train_Graph(object):
 
                 VAE_loss, VAE_outputs, latent_zs = VAE_forward(image=self.image_batch, masks=self.generated_masks[:,:,:,:,:-1*self.config.n_bg],  
                     bg_dim=self.config.bg_dim, tex_dim=self.config.tex_dim, mask_dim=self.config.mask_dim, 
-                    scope=scope, reuse=None, training=self.is_training)
-
+                    scope=scope, reuse=None, training=self.is_training, augmentation=self.config.PC)
+                self.VAE_outputs = VAE_outputs
             if self.config.mode=='train_PC':
                 #----------perceptual consistency---------------
                 mask_top_dims = tf.sort(tf.math.top_k(input=VAE_loss['mask_kl'], k=2)[1]) 
