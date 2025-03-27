@@ -1,4 +1,4 @@
-# Learning to Manipulate Individual Objects in an Image
+# [CVPR 2020] Learning to Manipulate Individual Objects in an Image
 This repo contains the implementation of the method described in the paper
 
 [Learning to Manipulate Individual Objects in an Image](https://arxiv.org/pdf/2004.05495.pdf)  
